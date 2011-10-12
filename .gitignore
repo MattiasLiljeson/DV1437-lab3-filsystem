@@ -2,4 +2,6 @@
 */dist/*
 */dist/
 */build/*
-*/build/
+*build/*
+*.dia~
+*/private/*

@@ -3,10 +3,10 @@ import java.io.*;
 
 public class Shell {
 
-    private Filesystem m_Filesystem;
+    private FileManager m_Filesystem;
     private InputStream m_Stream;
 
-    public Shell(Filesystem p_Filesystem, InputStream p_Stream) {
+    public Shell(FileManager p_Filesystem, InputStream p_Stream) {
         m_Filesystem = p_Filesystem;
 
         if (p_Stream == null) {
