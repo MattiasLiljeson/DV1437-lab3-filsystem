@@ -17,6 +17,9 @@ public class FolderBlock implements Serializable{
     //
     // Static variables and methods
     //
+    
+    // Not ours. stolen from: 
+    // http://stackoverflow.com/questions/2836646/java-serializable-object-to-byte-array
     public static FolderBlock load(byte[] data){
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
         FolderBlock folderBlockInstance = null;

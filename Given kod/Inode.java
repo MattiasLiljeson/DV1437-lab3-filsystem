@@ -18,7 +18,13 @@ public class Inode {
     private int dataPtr;
 
     public Inode(){
-        // Do nothing
+        dataPtr = -1;
+    }
+    
+    public Inode(boolean isFolder){
+        dataPtr = -1;
+        if(isFolder)
+            type = 1;
     }
     
     public Inode(byte[] block) {

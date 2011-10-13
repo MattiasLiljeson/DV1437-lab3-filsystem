@@ -68,49 +68,22 @@ class FileSystem implements Serializable {
         workDirPathNames.push("root");
     }
     
-    
     public int touchFile(String fileName, boolean asFolder){
-        // Like JESUS!
         int result = -1;
         if(isFileInFolder(fileName) == false){
-            int inodeBlock; // = getFreeBlock();
-            int dataBlock; // = getFreeBlock();
-            
-
-            /* NOTE: When writing data larger than one block, 
-             * since "freeBlock = false" is done by "writeFile", is it possible that
-             * writeFile uses one of the above "preoccupied" blocks? 
-            */
-
-            Inode inode = new Inode();
-            inode.setDataPtr(dataBlock);
+            int inodeBlock = getFreeBlock();
+            Inode inode = new Inode(asFolder);
             inode.setSize(0);
+            
+            // Save to the block array so writeFile() can find it
+            blockArray[inodeBlock] = inode.save();
 
             if(asFolder){
-                inode.setType((byte)1);
-
                 FolderBlock folderBlock = new FolderBlock();
-                writeFile(inodeBlock, )
-                byte[] data;
-                // Write folder data to datablock
-                writeFile(inodeBlock, data);
+                writeFile(inodeBlock, FolderBlock.save(folderBlock));
             }
-            else{
-                inode.setType((byte)0);
-            }
-
-            // Fetch workdir inode and fetch dataptr.
-            int dataptr = workDirPathIds.peek();
-
-            // Use readFile(dataPtr) and create a byte array.
-            readFile(dataptr);
-
-            // create a folderBlock object with the above given bytearray
-            // Add file/folder to the folderBlock.
-            // Save the folderBlock object as bytearray
-            // replace data with writeFile()
             
-            
+            // Update Folder with the new file and save to disk.
             workDir.addFile(inodeBlock, fileName);
             writeFile(workDirPathIds.peek(), FolderBlock.save(workDir));
         }
@@ -119,15 +92,13 @@ class FileSystem implements Serializable {
     
     public int writeFile(int fileId, byte[] data) {
         int result = 0;
-        if (!(NUM_BLOCKS > fileId && fileId > 2)) {
-            // Block out-of-range
-            result = -1;
-        }
-        else{
-            if(fileId == -1){
-                fileId = getFreeBlock();
-                result = fileId;
-            }
+        if (NUM_BLOCKS > fileId && fileId >= 0) {
+//            if(fileId == -1){
+//                fileId = getFreeBlock();
+//                Inode inode = new Inode();
+//                blockArray[fileId] = inode.save();
+//                result = fileId;
+//            }
             
             int writtenBytes = 0;
 
@@ -136,6 +107,8 @@ class FileSystem implements Serializable {
             //System.arraycopy(inode.save(), 0, blockArray[fileId], 0, BLOCK_SIZE);
             blockArray[fileId] = inode.save();
             int blockId = inode.getDataPtr();
+            if(blockId == -1)
+                blockId = getFreeBlock();
             
             boolean done = false;
             while(!done){
@@ -161,17 +134,16 @@ class FileSystem implements Serializable {
                         releaseBlock(nextBlockId);
                 }
             }
+        }else{
+            // Block out-of-range
+            result = -1;
         }
         return result;
     }
         
     public byte[] readFile(int fileId) {
-        byte[] data;
-        if (!(NUM_BLOCKS > fileId && fileId > 0)) {
-            // Block out-of-range
-            data = null;
-        }
-        else{
+        byte[] data = null;
+        if (NUM_BLOCKS > fileId && fileId > 0) {
             int readBytes = 0;
 
             Inode inode = new Inode(blockArray[fileId]);           
