@@ -1,5 +1,6 @@
 
 import java.io.Serializable;
+import java.util.Map;
 import java.util.Stack;
 
 class FileSystem implements Serializable {
@@ -44,6 +45,7 @@ class FileSystem implements Serializable {
     byte[][] blockArray = new byte[NUM_BLOCKS][BLOCK_SIZE];
     Stack<Integer> workDirPathIds;
     Stack<String> workDirPathNames;
+    FolderBlock workDir;
 
     public FileSystem() {
         workDirPathIds = new Stack<Integer>();
@@ -55,69 +57,84 @@ class FileSystem implements Serializable {
             freeBlocks[i] = true;
         }
         
-        // Set up the root inode at fileId 0.
-        // Create empty folder as root folder.
+        // Set up the root folder and its inode
+        Inode inode = new Inode();
+        blockArray[0] = inode.save();
+        FolderBlock folderBlock = new FolderBlock();
+        writeFile(0,FolderBlock.save(folderBlock));
+        
+        workDir = folderBlock;
+        workDirPathIds.push(0);
+        workDirPathNames.push("root");
     }
     
-    // Like JESUS!
+    
     public int touchFile(String fileName, boolean asFolder){
-        
-        // TODO: Check if filname already exist in catalogue
-        if(isFileInFolder(fileName)){
-            // Abort operation
-        }
-        
-        int inodeBlock = getFreeBlock();
-        int dataBlock = getFreeBlock();
-        
-        /* NOTE: When writing data larger than one block, 
-         * since "freeBlock = false" is done by "writeFile", is it possible that
-         * writeFile uses one of the above "preoccupied" blocks? 
-        */
-        
-        Inode inode = new Inode();
-        inode.setDataPtr(dataBlock);
-        inode.setSize(0);
-        
-        if(asFolder){
-            inode.setType((byte)1);
+        // Like JESUS!
+        int result = -1;
+        if(isFileInFolder(fileName) == false){
+            int inodeBlock; // = getFreeBlock();
+            int dataBlock; // = getFreeBlock();
             
-            FolderBlock folderBlock = new FolderBlock();
-            // Add folder data
-            // Export folder data as a byte array
-            byte[] data;
-            // Write folder data to datablock
-            writeFile(inodeBlock, data);
+
+            /* NOTE: When writing data larger than one block, 
+             * since "freeBlock = false" is done by "writeFile", is it possible that
+             * writeFile uses one of the above "preoccupied" blocks? 
+            */
+
+            Inode inode = new Inode();
+            inode.setDataPtr(dataBlock);
+            inode.setSize(0);
+
+            if(asFolder){
+                inode.setType((byte)1);
+
+                FolderBlock folderBlock = new FolderBlock();
+                writeFile(inodeBlock, )
+                byte[] data;
+                // Write folder data to datablock
+                writeFile(inodeBlock, data);
+            }
+            else{
+                inode.setType((byte)0);
+            }
+
+            // Fetch workdir inode and fetch dataptr.
+            int dataptr = workDirPathIds.peek();
+
+            // Use readFile(dataPtr) and create a byte array.
+            readFile(dataptr);
+
+            // create a folderBlock object with the above given bytearray
+            // Add file/folder to the folderBlock.
+            // Save the folderBlock object as bytearray
+            // replace data with writeFile()
+            
+            
+            workDir.addFile(inodeBlock, fileName);
+            writeFile(workDirPathIds.peek(), FolderBlock.save(workDir));
         }
-        else{
-            inode.setType((byte)0);
-        }
-        
-        // Fetch workdir inode and fetch dataptr.
-        int dataptr = workDirPathIds.peek();
-        
-        // Use readFile(dataPtr) and create a byte array.
-        readFile(dataptr);
-        
-        // create a folderBlock object with the above given bytearray
-        // Add file/folder to the folderBlock.
-        // Save the folderBlock object as bytearray
-        // replace data with writeFile()
-        
-        return -1;
+        return result;
     }
+    
     public int writeFile(int fileId, byte[] data) {
         int result = 0;
-        if (!(NUM_BLOCKS > fileId && fileId > 0)) {
+        if (!(NUM_BLOCKS > fileId && fileId > 2)) {
             // Block out-of-range
             result = -1;
         }
         else{
+            if(fileId == -1){
+                fileId = getFreeBlock();
+                result = fileId;
+            }
+            
             int writtenBytes = 0;
 
             Inode inode = new Inode(blockArray[fileId]);           
             inode.setSize(data.length);
-            System.arraycopy(inode.save(), 0, blockArray[fileId], 0, BLOCK_SIZE);
+            //System.arraycopy(inode.save(), 0, blockArray[fileId], 0, BLOCK_SIZE);
+            blockArray[fileId] = inode.save();
             int blockId = inode.getDataPtr();
             
             boolean done = false;
@@ -148,7 +165,6 @@ class FileSystem implements Serializable {
         return result;
     }
         
-
     public byte[] readFile(int fileId) {
         byte[] data;
         if (!(NUM_BLOCKS > fileId && fileId > 0)) {
@@ -202,17 +218,11 @@ class FileSystem implements Serializable {
         // Setting the block as used is done by writeBlock()
     }
     
-    public boolean isFileInFolder(String file){
+    public boolean isFileInFolder(String fileName){
         boolean result = false;
-        int dataptr = workDirPathIds.peek();
-        FolderBlock folder = new FolderBlock(readFile(dataptr));
-        
-        // TODO:
-        // Fetch fileNamePtrs from folder?
-        // Fetch byteArray from blockArray?
-        // Convert byteArray to String?
-        // Compare all file names with file?
-        
+        Map map = workDir.getFileListing();
+        if(map.get(fileName) != null)
+            result = true;        
         return result;
     }   
 }
