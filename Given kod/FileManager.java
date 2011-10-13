@@ -1,10 +1,17 @@
 
+import java.util.Stack;
+
 public class FileManager {
 
-    private FileSystem m_BlockDevice;
+    private FileSystem fileSystem;
+    
 
     public FileManager(FileSystem p_BlockDevice) {
-        m_BlockDevice = p_BlockDevice;
+        fileSystem = p_BlockDevice;
+        
+        // Add root map
+        workDir = new Stack<String>();
+        workDir.add("Root");
     }
 
     public String format() {
@@ -82,12 +89,40 @@ public class FileManager {
         System.out.print("");
         return new String("");
     }
-
-    public String cd(String[] p_asPath) {
-        System.out.print("Changing directory to ");
-        dumpArray(p_asPath);
-        System.out.print("");
-        return new String("");
+    
+    Stack<String> workDir;
+    
+    public String cd(String[] path) { 
+        // Backup old workdir
+         Stack<String> tmp_workDir = (Stack<String>) workDir.clone();
+        
+         // Manipulate workDir based on commands in path array
+         for(String p : path){
+             if( p.equals("..")){
+                 // Avoid pop if "Root" is reached
+                 if(workDir.size() > 1)
+                     workDir.pop();
+             }else if( p.equals(".")){
+                 // Nothing
+             }else {
+                 workDir.add(p);
+             }
+         }
+         
+         // Restore workDir if new workDir does't exist in filesystem
+         if(fileSystem.isPathValid(path) == false){
+             System.out.print("No such directory");
+             Stack<String> workDir = (Stack<String>) tmp_workDir.clone();
+         }
+         
+         // Print path
+        System.out.print("PATH: ~");
+        for(String d : workDir){
+            System.out.print("/"+d);
+        }
+         
+         // Return
+         return new String("");
     }
 
     public String pwd() {

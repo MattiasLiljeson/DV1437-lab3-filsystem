@@ -2,6 +2,7 @@
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Stack;
+import java.util.Set;
 
 class FileSystem implements Serializable {
     //
@@ -46,40 +47,44 @@ class FileSystem implements Serializable {
     Stack<Integer> workDirPathIds;
     Stack<String> workDirPathNames;
     FolderBlock workDir;
+    
 
     public FileSystem() {
         workDirPathIds = new Stack<Integer>();
         workDirPathNames = new Stack<String>();
     }
     
-    public boolean changeWorkDir(String[] path){
-        // TODO: Debug this method. It feels a bit shaky.
-        // Create temps and open root
-        Integer tmpId = 0;
-        FolderBlock tmpWorkDir = FolderBlock.load(readFile(tmpId));
-        Stack tmpIdStack = new Stack();
-        Stack tmpPathStack = new Stack();
-        tmpIdStack.push(0);
-        tmpPathStack.push("");
+    public boolean isPathValid(String[] path){
         
+        // Init
         boolean result = true;
-        int i=0;
-        do{
-            tmpId = tmpWorkDir.getFileListing().get(path[i]);
-            if(tmpId != null){
-                tmpWorkDir = FolderBlock.load(readFile(tmpId));
-                tmpIdStack.push(tmpId);
-                tmpPathStack.push(path[i]);
+        int i = 0;
+        int folderId = 0; // Root folder
+        
+        // For each "path", or until "invalid path" is detected
+        while(i<path[i].length() && result == true){
+            // Fetch correct folder
+            FolderBlock folder = FolderBlock.load(readFile(folderId));
+            // Fetch all files from folder
+            Set<String> files = folder.getFileListing().keySet();
+            
+            // Check if path corresponds with a folder
+            if(files.contains(path[i]))
+            {
+                // Check if folder
+                int inodId = folder.getFileListing().get(path[i]);
+                if(isFolder(inodId)){
+                    // Splendid! We found a folder. Now we just have to make
+                    // sure all of the remaining "path" is folders aswell
+                }else {
+                    result = false;
+                }
+            }else {
                 result = false;
             }
-            i++;
-        }while(result == true && i<path.length);
-        
-        if(result == true){
-            //workDir = 
-            workDirPathIds = tmpIdStack;
-            workDirPathNames = tmpPathStack;
         }
+
+        //Result
         return result;
     }
     
@@ -126,6 +131,24 @@ class FileSystem implements Serializable {
             freeBlock = -1;
         return freeBlock;
         // Setting the block as used is done by writeBlock()
+    }
+    
+    public boolean isFolder(int fileId) {
+        boolean result = false;
+        
+        // If withing block range
+        if (NUM_BLOCKS > fileId && fileId > 0) {
+            
+            // Check if Inode is a block
+            Inode inode = new Inode(blockArray[fileId]);           
+            if(inode.getType() == 1)
+            {
+                result = true;
+            }
+        }
+        
+        //Return
+        return result;
     }
     
     public byte[] readFile(int fileId) {
@@ -235,3 +258,54 @@ class FileSystem implements Serializable {
     }
 
 }
+
+/* Kodkyrkogården,
+ * här ligger gammal "odöd" kod,
+ * sparad av sentimentala själ.  
+
+                 _____
+              /~/~   ~\
+             | |       \
+             \ \        \
+              \ \        \
+             --\ \       .\'
+            --==\ \     ,,.''.,
+                ''"'',,}{,,
+ */
+
+//    public boolean changeWorkDir(String[] path){
+//        // TODO: Debug this method. It feels a bit shaky.
+//        // Create temps and open root
+//        
+//        // Save root dir in tmp
+//        Integer tmpId = 0;
+//        FolderBlock tmpWorkDir = FolderBlock.load(readFile(tmpId));
+//        
+//        // Build tmp stack
+//        Stack tmpIdStack = new Stack();
+//        Stack tmpPathStack = new Stack();
+//        tmpIdStack.push(0);
+//        tmpPathStack.push("");
+//        
+//        //For each "path" String
+//        boolean result = true;
+//        int i=0;
+//        do{
+//            // Check if path exist in directory
+//            tmpId = tmpWorkDir.getFileListing().get(path[i]);
+//            if(tmpId != null){
+//                tmpWorkDir = FolderBlock.load(readFile(tmpId));
+//                tmpIdStack.push(tmpId);
+//                tmpPathStack.push(path[i]);
+//                result = false;
+//            }
+//            i++;
+//        }while(result == true && i<path.length);
+//        
+//        if(result == true){
+//            //workDir = 
+//            workDirPathIds = tmpIdStack;
+//            workDirPathNames = tmpPathStack;
+//        }
+//        return result;
+//    }
