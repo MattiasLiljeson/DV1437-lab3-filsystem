@@ -2,7 +2,7 @@
 import java.io.Serializable;
 import java.util.Stack;
 
-public class FileSystem implements Serializable {
+class FileSystem implements Serializable {
     //
     // Static variables and methods
     //
@@ -19,7 +19,7 @@ public class FileSystem implements Serializable {
             (byte)value};
     }
     public static final byte[] intToByteArray(int value, byte[] dst, int start) {
-        byte[] tmp = FileSystem.intToByteArray(value); 
+        byte[] tmp = intToByteArray(value); 
         System.arraycopy(tmp, 0, dst, start, 4);
         return dst;
     }
