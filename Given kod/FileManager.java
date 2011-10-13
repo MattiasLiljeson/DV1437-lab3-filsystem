@@ -8,10 +8,10 @@ public class FileManager {
 
     public FileManager(FileSystem p_BlockDevice) {
         fileSystem = p_BlockDevice;
+        fileSystem.format();
         
         // Add root map
         workDir = new Stack<String>();
-        workDir.add("Root");
     }
 
     public String format() {
@@ -99,9 +99,7 @@ public class FileManager {
          // Manipulate workDir based on commands in path array
          for(String p : path){
              if( p.equals("..")){
-                 // Avoid pop if "Root" is reached
-                 if(workDir.size() > 1)
-                     workDir.pop();
+                  workDir.pop();
              }else if( p.equals(".")){
                  // Nothing
              }else {
@@ -109,8 +107,8 @@ public class FileManager {
              }
          }
          
-         // Restore workDir if new workDir does't exist in filesystem
-         if(fileSystem.isPathValid(path) == false){
+         // Restore workDir if new workDir doesn't exist in filesystem
+         if(fileSystem.setWorkDir(getWorkDirArray()) == false){
              System.out.print("No such directory");
              Stack<String> workDir = (Stack<String>) tmp_workDir.clone();
          }
@@ -123,6 +121,14 @@ public class FileManager {
          
          // Return
          return new String("");
+    }
+    
+    private String[] getWorkDirArray() {
+        String array[] = new String[workDir.size()];
+        for(int i=0; i<workDir.size(); i++){
+            array[i] = workDir.get(i);
+        }
+        return array;
     }
 
     public String pwd() {

@@ -44,47 +44,23 @@ class FileSystem implements Serializable {
     
     boolean[] freeBlocks = new boolean[NUM_BLOCKS];
     byte[][] blockArray = new byte[NUM_BLOCKS][BLOCK_SIZE];
-    Stack<Integer> workDirPathIds;
-    Stack<String> workDirPathNames;
     FolderBlock workDir;
+    int workDirId;
     
 
-    public FileSystem() {
-        workDirPathIds = new Stack<Integer>();
-        workDirPathNames = new Stack<String>();
+    public FileSystem() { 
     }
     
-    public boolean isPathValid(String[] path){
+    // Set workDir, returns if succeded or not
+    public boolean setWorkDir(String[] path){
+        boolean result = false;
+        int id = getFolderId(path);
+        if(id != -1){
+            workDir = FolderBlock.load(readFile(id));
+            workDirId = getFolderId(path);
+            result = true;  
+        }   
         
-        // Init
-        boolean result = true;
-        int i = 0;
-        int folderId = 0; // Root folder
-        
-        // For each "path", or until "invalid path" is detected
-        while(i<path[i].length() && result == true){
-            // Fetch correct folder
-            FolderBlock folder = FolderBlock.load(readFile(folderId));
-            // Fetch all files from folder
-            Set<String> files = folder.getFileListing().keySet();
-            
-            // Check if path corresponds with a folder
-            if(files.contains(path[i]))
-            {
-                // Check if folder
-                int inodId = folder.getFileListing().get(path[i]);
-                if(isFolder(inodId)){
-                    // Splendid! We found a folder. Now we just have to make
-                    // sure all of the remaining "path" is folders aswell
-                }else {
-                    result = false;
-                }
-            }else {
-                result = false;
-            }
-        }
-
-        //Result
         return result;
     }
     
@@ -104,17 +80,7 @@ class FileSystem implements Serializable {
         writeFile(0,FolderBlock.save(folderBlock));
         
         workDir = folderBlock;
-        workDirPathIds.push(0);
-        //workDirPathNames.push("root");
-        workDirPathNames.push("");
-    }
-    
-    public boolean isFileInFolder(String fileName){
-        boolean result = false;
-        Map map = workDir.getFileListing();
-        if(map.get(fileName) != null)
-            result = true;        
-        return result;
+        workDirId = 0;
     } 
     
     private int getFreeBlock() {
@@ -133,7 +99,56 @@ class FileSystem implements Serializable {
         // Setting the block as used is done by writeBlock()
     }
     
-    public boolean isFolder(int fileId) {
+    // Returns the blockId of the last folder from a given path
+    public int getFolderId(String[] path){
+         
+        // Init
+        boolean validPath = true;
+        int i = 0;
+        int folderId = 0; // Root folder
+        
+        // For each "path", or until "invalid path" is detected
+        while(i<path[i].length() && validPath == true){
+            // Fetch correct folder
+            FolderBlock folder = FolderBlock.load(readFile(folderId));
+            
+            // Check if path corresponds with one of the filenames in the folder
+            if(isFileInFolder(path[i], folder))
+            {
+                // Check if file is a folder
+                int inodId = folder.getFileListing().get(path[i]);
+                if(isAFolder(inodId)){
+                    // Splendid! We found a folder. Now we just have to make
+                    // sure all of the remaining "path" is folders aswell
+                }else {
+                    validPath = false;
+                }
+            }else {
+                validPath = false;
+            }
+        }
+
+        // If invalid path, return -1
+        if(validPath == false)
+        {
+            folderId = -1;
+        }
+        return folderId;
+    }
+    
+    public boolean isFileInFolder(String fileName, FolderBlock folder){
+        boolean result = false;
+        Map map = folder.getFileListing();
+        if(map.get(fileName) != null)
+            result = true;        
+        return result;
+    }
+    
+    public boolean isFileInFolder(String fileName){
+        return isFileInFolder(fileName, workDir);
+    }
+    
+    public boolean isAFolder(int fileId) {
         boolean result = false;
         
         // If withing block range
@@ -201,7 +216,7 @@ class FileSystem implements Serializable {
             
             // Update Folder with the new file and save to disk.
             workDir.addFile(inodeBlock, fileName);
-            writeFile(workDirPathIds.peek(), FolderBlock.save(workDir));
+            writeFile(workDirId, FolderBlock.save(workDir));
         }
         return result;
     }
