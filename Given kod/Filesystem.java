@@ -51,11 +51,7 @@ class FileSystem implements Serializable {
         workDirPathIds = new Stack<Integer>();
         workDirPathNames = new Stack<String>();
         
-        blockArray = new byte[NUM_BLOCKS][BLOCK_SIZE];
-        freeBlocks = new boolean[NUM_BLOCKS];
-        for(int i=0; i<NUM_BLOCKS; i++){
-            freeBlocks[i] = true;
-        }
+        
         
         // Set up the root folder and its inode
         Inode inode = new Inode();
@@ -66,6 +62,73 @@ class FileSystem implements Serializable {
         workDir = folderBlock;
         workDirPathIds.push(0);
         workDirPathNames.push("root");
+    }
+    
+    public void format(){
+        // clean the block array
+        blockArray = new byte[NUM_BLOCKS][BLOCK_SIZE];
+        freeBlocks = new boolean[NUM_BLOCKS];
+        for(int i=0; i<NUM_BLOCKS; i++){
+            freeBlocks[i] = true;
+            releaseBlock(i);
+        }
+    }
+    
+    public boolean isFileInFolder(String fileName){
+        boolean result = false;
+        Map map = workDir.getFileListing();
+        if(map.get(fileName) != null)
+            result = true;        
+        return result;
+    } 
+    
+    private int getFreeBlock() {
+        int i=0;
+        int freeBlock = 0;
+        while(i<NUM_BLOCKS && freeBlock == 0){
+            if(freeBlocks[i] == true)
+                freeBlock = i;
+            i++;
+        }
+        
+        // Return as -1 if no block is available
+        if(freeBlock == 0)
+            freeBlock = -1;
+        return freeBlock;
+        // Setting the block as used is done by writeBlock()
+    }
+    
+public byte[] readFile(int fileId) {
+        byte[] data = null;
+        if (NUM_BLOCKS > fileId && fileId > 0) {
+            int readBytes = 0;
+
+            Inode inode = new Inode(blockArray[fileId]);           
+            int blockId = inode.getDataPtr();
+            data = new byte[inode.getSize()];
+
+            boolean done = false;
+            while(!done){
+                System.arraycopy(blockArray[blockId], 0, data, readBytes, BLOCK_SIZE-1-4);
+                readBytes += BLOCK_SIZE;
+
+                if(readBytes < data.length)
+                    blockId = byteArrayToInt(blockArray[blockId], BLOCK_SIZE-1-4);
+                else
+                    done = true;          
+            }
+        }
+        return data;
+    }
+    
+    public void releaseBlock(int blockId){
+        int nextBlockId = byteArrayToInt(blockArray[blockId],BLOCK_SIZE-1-4);
+        if(nextBlockId != -1)
+            releaseBlock(nextBlockId);
+        
+        // Set next block id to -1 
+        intToByteArray(-1, blockArray[blockId], BLOCK_SIZE-1-4);
+        freeBlocks[blockId] = true;
     }
     
     public int touchFile(String fileName, boolean asFolder){
@@ -140,61 +203,5 @@ class FileSystem implements Serializable {
         }
         return result;
     }
-        
-    public byte[] readFile(int fileId) {
-        byte[] data = null;
-        if (NUM_BLOCKS > fileId && fileId > 0) {
-            int readBytes = 0;
 
-            Inode inode = new Inode(blockArray[fileId]);           
-            int blockId = inode.getDataPtr();
-            data = new byte[inode.getSize()];
-
-            boolean done = false;
-            while(!done){
-                System.arraycopy(blockArray[blockId], 0, data, readBytes, BLOCK_SIZE-1-4);
-                readBytes += BLOCK_SIZE;
-
-                if(readBytes < data.length)
-                    blockId = byteArrayToInt(blockArray[blockId], BLOCK_SIZE-1-4);
-                else
-                    done = true;          
-            }
-        }
-        return data;
-    }
-    
-    public void releaseBlock(int blockId){
-        int nextBlockId = byteArrayToInt(blockArray[blockId],BLOCK_SIZE-1-4);
-        if(nextBlockId != -1)
-            releaseBlock(nextBlockId);
-        
-        // Set next block id to -1 
-        intToByteArray(-1, blockArray[blockId], BLOCK_SIZE-1-4);
-        freeBlocks[blockId] = true;
-    }
-
-    private int getFreeBlock() {
-        int i=0;
-        int freeBlock = 0;
-        while(i<NUM_BLOCKS && freeBlock == 0){
-            if(freeBlocks[i] == true)
-                freeBlock = i;
-            i++;
-        }
-        
-        // Return as -1 if no block is available
-        if(freeBlock == 0)
-            freeBlock = -1;
-        return freeBlock;
-        // Setting the block as used is done by writeBlock()
-    }
-    
-    public boolean isFileInFolder(String fileName){
-        boolean result = false;
-        Map map = workDir.getFileListing();
-        if(map.get(fileName) != null)
-            result = true;        
-        return result;
-    }   
 }
