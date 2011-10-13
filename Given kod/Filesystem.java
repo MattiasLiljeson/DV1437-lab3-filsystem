@@ -50,18 +50,37 @@ class FileSystem implements Serializable {
     public FileSystem() {
         workDirPathIds = new Stack<Integer>();
         workDirPathNames = new Stack<String>();
+    }
+    
+    public boolean changeWorkDir(String[] path){
+        // TODO: Debug this method. It feels a bit shaky.
+        // Create temps and open root
+        Integer tmpId = 0;
+        FolderBlock tmpWorkDir = FolderBlock.load(readFile(tmpId));
+        Stack tmpIdStack = new Stack();
+        Stack tmpPathStack = new Stack();
+        tmpIdStack.push(0);
+        tmpPathStack.push("");
         
+        boolean result = true;
+        int i=0;
+        do{
+            tmpId = tmpWorkDir.getFileListing().get(path[i]);
+            if(tmpId != null){
+                tmpWorkDir = FolderBlock.load(readFile(tmpId));
+                tmpIdStack.push(tmpId);
+                tmpPathStack.push(path[i]);
+                result = false;
+            }
+            i++;
+        }while(result == true && i<path.length);
         
-        
-        // Set up the root folder and its inode
-        Inode inode = new Inode();
-        blockArray[0] = inode.save();
-        FolderBlock folderBlock = new FolderBlock();
-        writeFile(0,FolderBlock.save(folderBlock));
-        
-        workDir = folderBlock;
-        workDirPathIds.push(0);
-        workDirPathNames.push("root");
+        if(result == true){
+            //workDir = 
+            workDirPathIds = tmpIdStack;
+            workDirPathNames = tmpPathStack;
+        }
+        return result;
     }
     
     public void format(){
@@ -72,6 +91,17 @@ class FileSystem implements Serializable {
             freeBlocks[i] = true;
             releaseBlock(i);
         }
+        
+        // Set up the root folder and its inode
+        Inode inode = new Inode();
+        blockArray[0] = inode.save();
+        FolderBlock folderBlock = new FolderBlock();
+        writeFile(0,FolderBlock.save(folderBlock));
+        
+        workDir = folderBlock;
+        workDirPathIds.push(0);
+        //workDirPathNames.push("root");
+        workDirPathNames.push("");
     }
     
     public boolean isFileInFolder(String fileName){
@@ -98,7 +128,7 @@ class FileSystem implements Serializable {
         // Setting the block as used is done by writeBlock()
     }
     
-public byte[] readFile(int fileId) {
+    public byte[] readFile(int fileId) {
         byte[] data = null;
         if (NUM_BLOCKS > fileId && fileId > 0) {
             int readBytes = 0;
