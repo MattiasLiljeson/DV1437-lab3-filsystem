@@ -61,8 +61,19 @@ public class FileSystem implements Serializable {
     
     // Like JESUS!
     public int touchFile(String fileName, boolean asFolder){
+        
+        // TODO: Check if filname already exist in catalogue
+        if(isFileInFolder(fileName)){
+            // Abort operation
+        }
+        
         int inodeBlock = getFreeBlock();
         int dataBlock = getFreeBlock();
+        
+        /* NOTE: When writing data larger than one block, 
+         * since "freeBlock = false" is done by "writeFile", is it possible that
+         * writeFile uses one of the above "preoccupied" blocks? 
+        */
         
         Inode inode = new Inode();
         inode.setDataPtr(dataBlock);
@@ -83,7 +94,11 @@ public class FileSystem implements Serializable {
         }
         
         // Fetch workdir inode and fetch dataptr.
+        int dataptr = workDirPathIds.peek();
+        
         // Use readFile(dataPtr) and create a byte array.
+        readFile(dataptr);
+        
         // create a folderBlock object with the above given bytearray
         // Add file/folder to the folderBlock.
         // Save the folderBlock object as bytearray
@@ -180,8 +195,24 @@ public class FileSystem implements Serializable {
             i++;
         }
         
+        // Return as -1 if no block is available
+        if(freeBlock == 0)
+            freeBlock = -1;
         return freeBlock;
         // Setting the block as used is done by writeBlock()
     }
     
+    public boolean isFileInFolder(String file){
+        boolean result = false;
+        int dataptr = workDirPathIds.peek();
+        FolderBlock folder = new FolderBlock(readFile(dataptr));
+        
+        // TODO:
+        // Fetch fileNamePtrs from folder?
+        // Fetch byteArray from blockArray?
+        // Convert byteArray to String?
+        // Compare all file names with file?
+        
+        return result;
+    }   
 }

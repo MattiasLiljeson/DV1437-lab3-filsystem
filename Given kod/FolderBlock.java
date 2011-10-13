@@ -19,6 +19,10 @@ public class FolderBlock {
     private byte[] filePtrs;
     private byte[] fileNamePtrs;
     
+    public FolderBlock(){
+        numFiles = 0;
+    }
+    
     public FolderBlock(byte[] block){
         load(block);
     }
@@ -62,13 +66,13 @@ public class FolderBlock {
     public byte addFile(Inode inode, String name){
         int result = 0;
         
-        if(numFiles > 255)
+        if(numFiles > 255){
             result = ERR_TOO_MANY_FILES_IN_FOLDER;
         // Other ifs
-        else{
-            filePtrs[numFiles] = inode.save();
+        }else{
+            //filePtrs[numFiles] = inode.save();
         }
         
-        return result;
+        return (byte)result;
     }
 }
