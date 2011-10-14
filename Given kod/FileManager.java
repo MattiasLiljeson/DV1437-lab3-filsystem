@@ -4,10 +4,11 @@ import java.util.Stack;
 public class FileManager {
 
     private FileSystem fileSystem;
+    private Stack<String> workDir;
     
 
-    public FileManager(FileSystem p_BlockDevice) {
-        fileSystem = p_BlockDevice;
+    public FileManager(FileSystem fileSystem) {
+        this.fileSystem = fileSystem;
         
         // Add root map
         workDir = new Stack<String>();
@@ -15,7 +16,7 @@ public class FileManager {
     }
 
     public String format() {
-        return new String("Diskformat successfull");
+        return new String("Diskformat successful");
     }
 
     public String ls(String[] p_asPath) {
@@ -90,8 +91,6 @@ public class FileManager {
         return new String("");
     }
     
-    Stack<String> workDir;
-    
     public String cd(String[] path) { 
         // Backup old workdir
          Stack<String> tmp_workDir = (Stack<String>) workDir.clone();
@@ -110,7 +109,7 @@ public class FileManager {
          }
          
          // Restore workDir if new workDir does't exist in filesystem
-         if(fileSystem.isPathValid(path) == false){
+         if(fileSystem.isPathValid(path) == -1){
              System.out.print("No such directory");
              Stack<String> workDir = (Stack<String>) tmp_workDir.clone();
          }
