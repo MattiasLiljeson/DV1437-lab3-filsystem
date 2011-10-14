@@ -59,7 +59,7 @@ class FileSystem implements Serializable {
         int id = getFolderId(path);
         if(id != -1){
             workDir = FolderBlock.load(readFile(id));
-            workDirId = getFolderId(path);
+            workDirId = id;
             result = true;  
         }
         return result;
@@ -291,29 +291,28 @@ class FileSystem implements Serializable {
     /**
      * Write a byte array to disk. Not affected by block size. This allocates, 
      * deallocates blocks as needed by itself
-     * @param fileId The id of the the file which is going to be written (its 
+     * @param inodeId The id of the the file which is going to be written (its 
      * inode id)
      * @param data A byte array of data. The size of the array doesn't have to 
      * be the same as the block size 
      * @return 
      */
-    public int writeFile(int fileId, byte[] data) {
+    public int writeFile(int inodeId, byte[] data) {
         int result = 0;
-        if (isIdValid(fileId)) {
+        if (isIdValid(inodeId)) {
             
             int writtenBytes = 0;
             int writtenBlocks = 0;
 
-            Inode inode = new Inode(blockArray[fileId]);           
+            Inode inode = new Inode(blockArray[inodeId]);           
             inode.setSize(data.length);
 
             int dataId = inode.getDataPtr();
             if(dataId == -1){
                 dataId = getFreeBlock();
                 inode.setDataPtr(dataId);
-                writeInode(fileId, inode);
             }
-                
+            writeInode(inodeId, inode);    
             
             boolean done = false;
             while(!done){
@@ -337,7 +336,7 @@ class FileSystem implements Serializable {
                         dataId = nextBlockId;
                     }
                 }
-                else{
+                else {
                     done = true;
                     if(nextBlockId != -1)
                         releaseBlock(nextBlockId);
