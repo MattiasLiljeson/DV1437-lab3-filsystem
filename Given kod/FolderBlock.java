@@ -32,8 +32,12 @@ public class FolderBlock implements Serializable{
             bis.close();
             in.close();
         }
-        catch(IOException            ignore){}
-        catch(ClassNotFoundException ignore){}
+        catch(IOException ex){
+            ex.printStackTrace();
+        }
+        catch(ClassNotFoundException ex){
+            ex.printStackTrace();
+        }
         
         if(tmpObj instanceof FolderBlock)
                 folderBlockInstance = (FolderBlock)tmpObj;
@@ -69,7 +73,7 @@ public class FolderBlock implements Serializable{
     public boolean addFile(int inodePtr, String name){
         boolean success = false;
         
-        if(folderContentsMap.get(name) == null){
+        if(isFileInFolder(name) == false){
             folderContentsMap.put(name, inodePtr);
             success = true;
         }

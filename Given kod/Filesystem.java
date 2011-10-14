@@ -80,7 +80,7 @@ class FileSystem implements Serializable {
         
         // Set up the root folder and its inode
         Inode inode = new Inode(true);
-        blockArray[0] = inode.save();
+        writeInode(0, inode);
         FolderBlock folderBlock = new FolderBlock();
         writeFile(0,FolderBlock.save(folderBlock));
         
@@ -114,7 +114,7 @@ class FileSystem implements Serializable {
     }
     
     /**
-     * Returns blockId of last the last folder in path.
+     * Returns dataId of last the last folder in path.
      * @param Path to look up.
      * @return The id of the last folder if the path exists and -1 if it doesn't.
      */
@@ -134,8 +134,8 @@ class FileSystem implements Serializable {
             if(folder.isFileInFolder(path[i]))
             {
                 // Check if file is a folder
-                int inodId = folder.getFileId(path[i]);
-                if(isAFolder(inodId)){
+                folderId = folder.getFileId(path[i]);
+                if(isAFolder(folderId)){
                     // Splendid! We found a folder. Now we just have to make
                     // sure all of the remaining "path" is folders aswell
                 }else {
@@ -144,6 +144,7 @@ class FileSystem implements Serializable {
             }else {
                 validPath = false;
             }
+            i++;
         }
 
         // If invalid path, return -1
@@ -160,35 +161,38 @@ class FileSystem implements Serializable {
     }
     
     /**
-     * Looks up if a file exists in a supplied folder.
-     * @param fileName Name of the file.
-     * @return true if file exists. 
-     */ 
-    public boolean isFileInFolder(String fileName){
-        return workDir.isFileInFolder(fileName);
-    }
-    
-    /**
      * See if a file is a folder
      * @param fileId Id of the file.
      * @return true if the file is a folder, otherwise false.
      */
     public boolean isAFolder(int fileId) {
         boolean result = false;
-        
+
         // If withing block range
-        if (NUM_BLOCKS > fileId && fileId > 0) {
-            
+        if(isIdValid(fileId)) {
+
             // Check if Inode is a block
-            Inode inode = new Inode(blockArray[fileId]);           
-            if(inode.getType() == 1)
-            {
+            Inode inode = new Inode(blockArray[fileId]);
+            if (inode.getType() == 1) {
                 result = true;
             }
         }
-        
+
         //Return
         return result;
+    }
+    
+    public boolean isIdValid(int blockId) {
+        return ((NUM_BLOCKS > blockId) && (blockId >= 0));
+    }
+    
+    /**
+     * Looks up if a file exists in a supplied folder.
+     * @param fileName Name of the file.
+     * @return true if file exists. 
+     */ 
+    public boolean isFileInFolder(String fileName){
+        return workDir.isFileInFolder(fileName);
     }
     
     /**
@@ -199,7 +203,7 @@ class FileSystem implements Serializable {
      */
     public byte[] readFile(int fileId) {
         byte[] data = null;
-        if (NUM_BLOCKS > fileId && fileId >= 0) {
+        if (isIdValid(fileId)) {
             int readBytes = 0;
 
             Inode inode = new Inode(blockArray[fileId]);           
@@ -226,7 +230,7 @@ class FileSystem implements Serializable {
     /**
      * Sets the block, and all of the blocks it points to via its nextBlock, 
      * nextBlock to -1. This is done to prepare the block for new data.
-     * @param blockId 
+     * @param dataId 
      */
     public void releaseBlock(int blockId){
         boolean freeNextBlock = false;
@@ -260,7 +264,7 @@ class FileSystem implements Serializable {
             inode.setSize(0);
 
             // Save to the block array so writeFile() can find it
-            blockArray[inodeBlock] = inode.save();
+            writeInode(inodeBlock, inode);
 
             if (asFolder) {
                 FolderBlock folderBlock = new FolderBlock();
@@ -277,6 +281,13 @@ class FileSystem implements Serializable {
         return result;
     }
     
+    public void writeInode(int blockId, Inode inode) {
+        if(isIdValid(blockId)){
+            blockArray[blockId] = inode.save();
+            freeBlocks[blockId] = false;
+        }     
+    }
+    
     /**
      * Write a byte array to disk. Not affected by block size. This allocates, 
      * deallocates blocks as needed by itself
@@ -288,49 +299,42 @@ class FileSystem implements Serializable {
      */
     public int writeFile(int fileId, byte[] data) {
         int result = 0;
-        if (NUM_BLOCKS > fileId && fileId >= 0) {
-//            if(fileId == -1){
-//                fileId = getFreeBlock();
-//                Inode inode = new Inode();
-//                blockArray[fileId] = inode.save();
-//                success = fileId;
-//            }
+        if (isIdValid(fileId)) {
             
             int writtenBytes = 0;
             int writtenBlocks = 0;
 
             Inode inode = new Inode(blockArray[fileId]);           
             inode.setSize(data.length);
-            //System.arraycopy(inode.save(), 0, blockArray[fileId], 0, BLOCK_SIZE);
-            int blockId = inode.getDataPtr();
-            if(blockId == -1){
-                blockId = getFreeBlock();
-                inode.setDataPtr(blockId);
-                blockArray[0] = inode.save();
+
+            int dataId = inode.getDataPtr();
+            if(dataId == -1){
+                dataId = getFreeBlock();
+                inode.setDataPtr(dataId);
+                writeInode(fileId, inode);
             }
-            blockArray[fileId] = inode.save();
                 
             
             boolean done = false;
             while(!done){
                 int i = 0;
-                while(i < BLOCK_SIZE-4 && writtenBytes < data.length ) {
-                    blockArray[blockId][i] = data[i+BLOCK_SIZE*writtenBlocks];
+                while(i < BLOCK_SIZE-1-4 && writtenBytes < data.length ) {
+                    blockArray[dataId][i] = data[i+BLOCK_SIZE*writtenBlocks];
                     writtenBytes++;
                     i++;
                 }
                 writtenBlocks++;
-                freeBlocks[blockId] = false;
+                freeBlocks[dataId] = false;
                 
                 
-                int nextBlockId = byteArrayToInt(blockArray[blockId], BLOCK_SIZE-1-4);
+                int nextBlockId = byteArrayToInt(blockArray[dataId], BLOCK_SIZE-1-4);
                 if(writtenBytes < data.length){
                     if(nextBlockId == -1){
-                        blockId = getFreeBlock();
-                        intToByteArray(nextBlockId, blockArray[blockId], BLOCK_SIZE-1-4);
+                        dataId = getFreeBlock();
+                        intToByteArray(nextBlockId, blockArray[dataId], BLOCK_SIZE-1-4);
                     }
                     else{
-                        blockId = nextBlockId;
+                        dataId = nextBlockId;
                     }
                 }
                 else{
@@ -345,7 +349,6 @@ class FileSystem implements Serializable {
         }
         return result;
     }
-
 }
 
 /* Kodkyrkogården,
