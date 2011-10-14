@@ -98,8 +98,10 @@ public class FileManager {
         
          // Manipulate workDir based on commands in path array
          for(String p : path){
-             if( p.equals("..")){
-                  workDir.pop();
+             if( p.equals("..") ){
+                 if(workDir.size()>0){
+                     workDir.pop();
+                 }
              }else if( p.equals(".")){
                  // Nothing
              }else {
@@ -109,8 +111,8 @@ public class FileManager {
          
          // Restore workDir if new workDir doesn't exist in filesystem
          if(fileSystem.setWorkDir(getWorkDirArray()) == false){
-             System.out.print("No such directory");
-             Stack<String> workDir = (Stack<String>) tmp_workDir.clone();
+             System.out.print("No such directory\n");
+             workDir = (Stack<String>) tmp_workDir.clone();
          }
          
          // Print path

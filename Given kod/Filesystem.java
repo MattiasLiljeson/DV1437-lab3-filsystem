@@ -108,7 +108,7 @@ class FileSystem implements Serializable {
         int folderId = 0; // Root folder
         
         // For each "path", or until "invalid path" is detected
-        while(i<path[i].length() && validPath == true){
+        while(i<path.length && validPath == true){
             // Fetch correct folder
             FolderBlock folder = FolderBlock.load(readFile(folderId));
             
@@ -168,7 +168,7 @@ class FileSystem implements Serializable {
     
     public byte[] readFile(int fileId) {
         byte[] data = null;
-        if (NUM_BLOCKS > fileId && fileId > 0) {
+        if (NUM_BLOCKS > fileId && fileId >= 0) {
             int readBytes = 0;
 
             Inode inode = new Inode(blockArray[fileId]);           
@@ -177,8 +177,11 @@ class FileSystem implements Serializable {
 
             boolean done = false;
             while(!done){
-                System.arraycopy(blockArray[blockId], 0, data, readBytes, BLOCK_SIZE-1-4);
-                readBytes += BLOCK_SIZE;
+                int numOfBytesToRead = BLOCK_SIZE-1-4;
+                if(numOfBytesToRead >= data.length-readBytes)
+                    numOfBytesToRead = data.length-readBytes;
+                System.arraycopy(blockArray[blockId], 0, data, readBytes, numOfBytesToRead);
+                readBytes += numOfBytesToRead;
 
                 if(readBytes < data.length)
                     blockId = byteArrayToInt(blockArray[blockId], BLOCK_SIZE-1-4);
@@ -242,10 +245,14 @@ class FileSystem implements Serializable {
             Inode inode = new Inode(blockArray[fileId]);           
             inode.setSize(data.length);
             //System.arraycopy(inode.save(), 0, blockArray[fileId], 0, BLOCK_SIZE);
-            blockArray[fileId] = inode.save();
             int blockId = inode.getDataPtr();
-            if(blockId == -1)
+            if(blockId == -1){
                 blockId = getFreeBlock();
+                inode.setDataPtr(blockId);
+                blockArray[0] = inode.save();
+            }
+            blockArray[fileId] = inode.save();
+                
             
             boolean done = false;
             while(!done){
