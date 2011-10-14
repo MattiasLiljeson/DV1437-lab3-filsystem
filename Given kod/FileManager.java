@@ -4,6 +4,7 @@ import java.util.Stack;
 public class FileManager {
 
     private FileSystem fileSystem;
+    Stack<String> workDir;
     
 
     public FileManager(FileSystem p_BlockDevice) {
@@ -15,7 +16,7 @@ public class FileManager {
     }
 
     public String format() {
-        return new String("Diskformat successfull");
+        return new String("Diskformat successful");
     }
 
     public String ls(String[] p_asPath) {
@@ -89,8 +90,6 @@ public class FileManager {
         System.out.print("");
         return new String("");
     }
-    
-    Stack<String> workDir;
     
     public String cd(String[] path) { 
         // Backup old workdir
