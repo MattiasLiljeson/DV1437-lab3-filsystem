@@ -3,11 +3,11 @@ import java.io.*;
 
 public class Shell {
 
-    private FileManager m_Filesystem;
+    private FileManager fileManager;
     private InputStream m_Stream;
 
     public Shell(FileManager p_Filesystem, InputStream p_Stream) {
-        m_Filesystem = p_Filesystem;
+        fileManager = p_Filesystem;
 
         if (p_Stream == null) {
             m_Stream = System.in;
@@ -25,7 +25,7 @@ public class Shell {
         String[] asCommandArray;
 
         while (bRun) {
-            System.out.print("[" + m_Filesystem.pwd() + "]$ ");
+            System.out.print("[" + fileManager.pwd() + "]$ ");
             sCommand = readLine();
             asCommandArray = split(sCommand, ' ');
             if (asCommandArray.length == 0) {
@@ -44,17 +44,17 @@ public class Shell {
                         if (asCommandArray.length != 1) {
                             System.out.println("Usage: format");
                         } else {
-                            System.out.println(m_Filesystem.format());
+                            System.out.println(fileManager.format());
                         }
                         break;
                     case 2: // ls
                         if (asCommandArray.length == 1) {
-                            System.out.println(m_Filesystem.ls(split(".", '/')));
+                            System.out.println(fileManager.ls(split(".", '/')));
                         } else {
                             if (asCommandArray.length != 2) {
                                 System.out.println("Usage: ls <path>");
                             } else {
-                                System.out.println(m_Filesystem.ls(split(asCommandArray[1], '/')));
+                                System.out.println(fileManager.ls(split(asCommandArray[1], '/')));
                             }
                         }
                         break;
@@ -63,7 +63,7 @@ public class Shell {
                             System.out.println("Usage: create <file>");
                         } else {
                             System.out.println("Enter data. Empty line to end.");
-                            System.out.println(m_Filesystem.create(split(asCommandArray[1], '/'), readBlock()));
+                            System.out.println(fileManager.create(split(asCommandArray[1], '/'), readBlock()));
                         }
                         break;
 
@@ -71,21 +71,21 @@ public class Shell {
                         if (asCommandArray.length != 2) {
                             System.out.println("Usage: cat <file>");
                         } else {
-                            System.out.println(m_Filesystem.cat(split(asCommandArray[1], '/')));
+                            System.out.println(fileManager.cat(split(asCommandArray[1], '/')));
                         }
                         break;
                     case 5: // save
                         if (asCommandArray.length != 2) {
                             System.out.println("Usage: save <real-file>");
                         } else {
-                            System.out.println(m_Filesystem.save(asCommandArray[1]));
+                            System.out.println(fileManager.save(asCommandArray[1]));
                         }
                         break;
                     case 6: // read
                         if (asCommandArray.length != 2) {
                             System.out.println("Usage: read <real-file>");
                         } else {
-                            System.out.println(m_Filesystem.read(asCommandArray[1]));
+                            System.out.println(fileManager.read(asCommandArray[1]));
                         }
                         break;
 
@@ -93,7 +93,7 @@ public class Shell {
                         if (asCommandArray.length != 2) {
                             System.out.println("Usage: rm <file>");
                         } else {
-                            System.out.println(m_Filesystem.rm(split(asCommandArray[1], '/')));
+                            System.out.println(fileManager.rm(split(asCommandArray[1], '/')));
                         }
                         break;
 
@@ -101,7 +101,7 @@ public class Shell {
                         if (asCommandArray.length != 3) {
                             System.out.println("Usage: copy <source> <destination>");
                         } else {
-                            System.out.println(m_Filesystem.copy(split(asCommandArray[1], '/'), split(asCommandArray[2], '/')));
+                            System.out.println(fileManager.copy(split(asCommandArray[1], '/'), split(asCommandArray[2], '/')));
                         }
                         break;
 
@@ -109,7 +109,7 @@ public class Shell {
                         if (asCommandArray.length != 3) {
                             System.out.println("Usage: append <source> <destination>");
                         } else {
-                            System.out.println(m_Filesystem.append(split(asCommandArray[1], '/'), split(asCommandArray[2], '/')));
+                            System.out.println(fileManager.append(split(asCommandArray[1], '/'), split(asCommandArray[2], '/')));
                         }
                         break;
 
@@ -117,7 +117,7 @@ public class Shell {
                         if (asCommandArray.length != 3) {
                             System.out.println("Usage: rename <old file> <new file>");
                         } else {
-                            System.out.println(m_Filesystem.rename(split(asCommandArray[1], '/'), split(asCommandArray[2], '/')));
+                            System.out.println(fileManager.rename(split(asCommandArray[1], '/'), split(asCommandArray[2], '/')));
                         }
                         break;
 
@@ -125,7 +125,7 @@ public class Shell {
                         if (asCommandArray.length != 2) {
                             System.out.println("Usage: mkdir <directory name>");
                         } else {
-                            System.out.println(m_Filesystem.mkdir(split(asCommandArray[1], '/')));
+                            System.out.println(fileManager.mkdir(split(asCommandArray[1], '/')));
                         }
                         break;
 
@@ -133,7 +133,7 @@ public class Shell {
                         if (asCommandArray.length != 2) {
                             System.out.println("Usage: cd <path>");
                         } else {
-                            System.out.println(m_Filesystem.cd(split(asCommandArray[1], '/')));
+                            System.out.println(fileManager.cd(split(asCommandArray[1], '/')));
                         }
                         break;
 
@@ -141,7 +141,7 @@ public class Shell {
                         if (asCommandArray.length != 1) {
                             System.out.println("Usage: pwd");
                         } else {
-                            System.out.println(m_Filesystem.pwd());
+                            System.out.println(fileManager.pwd());
                         }
                         break;
 

@@ -114,12 +114,6 @@ public class FileManager {
              workDir = (Stack<String>) tmp_workDir.clone();
          }
          
-         // Print path
-        System.out.print("PATH: ~");
-        for(String d : workDir){
-            System.out.print("/"+d);
-        }
-         
          // Return
          return new String("");
     }
@@ -133,7 +127,13 @@ public class FileManager {
     }
 
     public String pwd() {
-        return new String("/unknown/");
+        // Print path
+        String path = "~";
+        for(String d : workDir){
+            path = path+"/"+d;
+        }
+        
+        return new String(path);
     }
 
     private void dumpArray(String[] p_asArray) {
