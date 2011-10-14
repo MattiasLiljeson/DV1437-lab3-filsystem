@@ -2,6 +2,7 @@
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /*
  *  Copyright Mattias Liljeson Oct 12, 2011
@@ -75,8 +76,29 @@ public class FolderBlock implements Serializable{
         return success;
     }
     
-    public Map<String, Integer> getFileListing(){
-        return folderContentsMap;
+//    public Map<String, Integer> getFileListing(){
+//        return folderContentsMap;
+//    }
+    
+    public int getFileId(String name){
+        return folderContentsMap.get(name);
+    }
+    
+    public int isFileId(String name){
+        return folderContentsMap.get(name);
+    }
+    
+    public boolean isFileInFolder(String fileName){
+        boolean result = false;
+        Map map = folderContentsMap;
+        if(map.get(fileName) != null)
+            result = true;
+        return result;
+    }
+    
+    public String[] getFileNames(){
+        Set<String> set = folderContentsMap.keySet();
+        return (String[])set.toArray(new String[set.size()]);   
     }
     
     public int getInodePtrFromString(String fileName){

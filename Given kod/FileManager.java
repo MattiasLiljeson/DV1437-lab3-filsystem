@@ -20,10 +20,16 @@ public class FileManager {
     }
 
     public String ls(String[] p_asPath) {
+        String result = "";
         System.out.print("Listing directory ");
-        dumpArray(p_asPath);
-        System.out.print("");
-        return new String("");
+        String[] fileNames = fileSystem.getFolderNames();
+        for(String f : fileNames){
+            result = result + f + "\n";
+        }
+        if(fileNames.length == 0){
+            result = "<empty>";
+        }
+        return result;
     }
 
     public String create(String[] p_asPath, byte[] p_abContents) {
@@ -84,10 +90,13 @@ public class FileManager {
         return new String("");
     }
 
-    public String mkdir(String[] p_asPath) {
-        System.out.print("Creating directory ");
-        dumpArray(p_asPath);
-        System.out.print("");
+    public String mkdir(String[] name) {
+        if(fileSystem.touchFile(name[0], true) != -1){
+            System.out.print("Directory created");
+        }else
+        {
+            System.out.print("Directory already exists");
+        }
         return new String("");
     }
     
@@ -110,7 +119,7 @@ public class FileManager {
          
          // Restore workDir if new workDir doesn't exist in filesystem
          if(fileSystem.setWorkDir(getWorkDirArray()) == false){
-             System.out.print("No such directory\n");
+             System.out.print("No such directory");
              workDir = (Stack<String>) tmp_workDir.clone();
          }
          

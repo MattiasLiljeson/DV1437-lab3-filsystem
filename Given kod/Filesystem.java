@@ -131,10 +131,10 @@ class FileSystem implements Serializable {
             FolderBlock folder = FolderBlock.load(readFile(folderId));
             
             // Check if path corresponds with one of the filenames in the folder
-            if(isFileInFolder(path[i], folder))
+            if(folder.isFileInFolder(path[i]))
             {
                 // Check if file is a folder
-                int inodId = folder.getFileListing().get(path[i]);
+                int inodId = folder.getFileId(path[i]);
                 if(isAFolder(inodId)){
                     // Splendid! We found a folder. Now we just have to make
                     // sure all of the remaining "path" is folders aswell
@@ -154,21 +154,18 @@ class FileSystem implements Serializable {
         return folderId;
     }
     
+    public String[] getFolderNames() {
+        String[] folders = workDir.getFileNames();
+        return folders;
+    }
+    
     /**
      * Looks up if a file exists in a supplied folder.
      * @param fileName Name of the file.
      * @return true if file exists. 
-     */
-    public boolean isFileInFolder(String fileName, FolderBlock folder){
-        boolean result = false;
-        Map map = folder.getFileListing();
-        if(map.get(fileName) != null)
-            result = true;        
-        return result;
-    }
-    
+     */ 
     public boolean isFileInFolder(String fileName){
-        return isFileInFolder(fileName, workDir);
+        return workDir.isFileInFolder(fileName);
     }
     
     /**
