@@ -1,8 +1,6 @@
 
 import java.io.Serializable;
 import java.util.Map;
-import java.util.Stack;
-import java.util.Set;
 
 class FileSystem implements Serializable {
     //
@@ -51,7 +49,11 @@ class FileSystem implements Serializable {
     public FileSystem() { 
     }
     
-    // Set workDir, returns if succeded or not
+    /**
+     * Sets workDir and workDirId. Returns false if path doesn't exist.
+     * @param Path Path to look up.
+     * @return The id of the last folder if the path exists and -1 if it doesn't.
+     */
     public boolean setWorkDir(String[] path){
         boolean result = false;
         int id = getFolderId(path);
@@ -59,11 +61,14 @@ class FileSystem implements Serializable {
             workDir = FolderBlock.load(readFile(id));
             workDirId = getFolderId(path);
             result = true;  
-        }   
-        
+        }
         return result;
     }
     
+    /**
+     * Formats the file system. This erases all data and sets up a clean root 
+     * folder.
+     */
     public void format(){
         // clean the block array
         blockArray = new byte[NUM_BLOCKS][BLOCK_SIZE];
@@ -79,10 +84,19 @@ class FileSystem implements Serializable {
         FolderBlock folderBlock = new FolderBlock();
         writeFile(0,FolderBlock.save(folderBlock));
         
+        // Reset workDir to root bock;
         workDir = folderBlock;
         workDirId = 0;
-    } 
+    }
     
+    /**
+     * get a unused block for example when allocating array. This block will not
+     * be reserved. If you use this method two times in a row without writing to
+     * the first block this method will return the same block. The reservation 
+     * is done by writeFile(). This is done so that empty blocks aren't being 
+     * reserved and therefore never written to.
+     * @return The ID of an empty block.
+     */
     private int getFreeBlock() {
         int i=0;
         int freeBlock = 0;
@@ -99,7 +113,11 @@ class FileSystem implements Serializable {
         // Setting the block as used is done by writeBlock()
     }
     
-    // Returns the blockId of the last folder from a given path
+    /**
+     * Returns blockId of last the last folder in path.
+     * @param Path to look up.
+     * @return The id of the last folder if the path exists and -1 if it doesn't.
+     */
     public int getFolderId(String[] path){
          
         // Init
@@ -136,6 +154,11 @@ class FileSystem implements Serializable {
         return folderId;
     }
     
+    /**
+     * Looks up if a file exists in a supplied folder.
+     * @param fileName Name of the file.
+     * @return true if file exists. 
+     */
     public boolean isFileInFolder(String fileName, FolderBlock folder){
         boolean result = false;
         Map map = folder.getFileListing();
@@ -148,6 +171,11 @@ class FileSystem implements Serializable {
         return isFileInFolder(fileName, workDir);
     }
     
+    /**
+     * See if a file is a folder
+     * @param fileId Id of the file.
+     * @return true if the file is a folder, otherwise false.
+     */
     public boolean isAFolder(int fileId) {
         boolean result = false;
         
@@ -166,6 +194,12 @@ class FileSystem implements Serializable {
         return result;
     }
     
+    /**
+     * Read a file from the file system.
+     * @param fileId The ID of the file (the file inodes id).
+     * @return A byte array of the data contained in the file. This is the 
+     * actual data in array and not limited by block size
+     */
     public byte[] readFile(int fileId) {
         byte[] data = null;
         if (NUM_BLOCKS > fileId && fileId >= 0) {
@@ -192,6 +226,11 @@ class FileSystem implements Serializable {
         return data;
     }
     
+    /**
+     * Sets the block, and all of the blocks it points to via its nextBlock, 
+     * nextBlock to -1. This is done to prepare the block for new data.
+     * @param blockId 
+     */
     public void releaseBlock(int blockId){
         boolean freeNextBlock = false;
         int nextBlockId = byteArrayToInt(blockArray[blockId], BLOCK_SIZE-1-4);
@@ -207,28 +246,49 @@ class FileSystem implements Serializable {
             releaseBlock(nextBlockId);
     }
     
-    public int touchFile(String fileName, boolean asFolder){
+    /**
+     * 'Touches' a file. Creates a inode in the given folder and gives it the
+     * supplied file name. If the file doesn't already exist.
+     * @param path Path to the folder where you want to create the file.
+     * @param fileName Name of the file.
+     * @param asFolder If the file is going to be a folder.
+     * @return -1 if the path is invalid or if the file already exists. 
+     * Otherwise its fileId (the inode id). 
+     */
+    public int touchFile(String fileName, boolean asFolder) {
         int result = -1;
-        if(isFileInFolder(fileName) == false){
+        if (isFileInFolder(fileName) == false) {
             int inodeBlock = getFreeBlock();
             Inode inode = new Inode(asFolder);
             inode.setSize(0);
-            
+
             // Save to the block array so writeFile() can find it
             blockArray[inodeBlock] = inode.save();
 
-            if(asFolder){
+            if (asFolder) {
                 FolderBlock folderBlock = new FolderBlock();
                 writeFile(inodeBlock, FolderBlock.save(folderBlock));
             }
-            
+
             // Update Folder with the new file and save to disk.
             workDir.addFile(inodeBlock, fileName);
             writeFile(workDirId, FolderBlock.save(workDir));
+
+            // Return the access ID to the new file  
+            result = inodeBlock;
         }
         return result;
     }
     
+    /**
+     * Write a byte array to disk. Not affected by block size. This allocates, 
+     * deallocates blocks as needed by itself
+     * @param fileId The id of the the file which is going to be written (its 
+     * inode id)
+     * @param data A byte array of data. The size of the array doesn't have to 
+     * be the same as the block size 
+     * @return 
+     */
     public int writeFile(int fileId, byte[] data) {
         int result = 0;
         if (NUM_BLOCKS > fileId && fileId >= 0) {
@@ -236,7 +296,7 @@ class FileSystem implements Serializable {
 //                fileId = getFreeBlock();
 //                Inode inode = new Inode();
 //                blockArray[fileId] = inode.save();
-//                result = fileId;
+//                success = fileId;
 //            }
             
             int writtenBytes = 0;
@@ -320,7 +380,7 @@ class FileSystem implements Serializable {
 //        tmpPathStack.push("");
 //        
 //        //For each "path" String
-//        boolean result = true;
+//        boolean success = true;
 //        int i=0;
 //        do{
 //            // Check if path exist in directory
@@ -329,15 +389,15 @@ class FileSystem implements Serializable {
 //                tmpWorkDir = FolderBlock.load(readFile(tmpId));
 //                tmpIdStack.push(tmpId);
 //                tmpPathStack.push(path[i]);
-//                result = false;
+//                success = false;
 //            }
 //            i++;
-//        }while(result == true && i<path.length);
+//        }while(success == true && i<path.length);
 //        
-//        if(result == true){
+//        if(success == true){
 //            //workDir = 
 //            workDirPathIds = tmpIdStack;
 //            workDirPathNames = tmpPathStack;
 //        }
-//        return result;
+//        return success;
 //    }

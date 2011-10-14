@@ -4,7 +4,7 @@ import java.util.Stack;
 public class FileManager {
 
     private FileSystem fileSystem;
-    Stack<String> workDir;
+    private Stack<String> workDir;
     
 
     public FileManager(FileSystem p_BlockDevice) {
