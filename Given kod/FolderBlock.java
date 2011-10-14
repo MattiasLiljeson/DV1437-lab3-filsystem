@@ -69,7 +69,7 @@ public class FolderBlock implements Serializable{
     public boolean addFile(int inodePtr, String name){
         boolean success = false;
         
-        if(folderContentsMap.get(name) != null){
+        if(folderContentsMap.get(name) == null){
             folderContentsMap.put(name, inodePtr);
             success = true;
         }

@@ -21,7 +21,6 @@ public class FileManager {
 
     public String ls(String[] p_asPath) {
         String result = "";
-        System.out.print("Listing directory ");
         String[] fileNames = fileSystem.getFolderNames();
         for(String f : fileNames){
             result = result + f + "\n";
