@@ -190,13 +190,18 @@ class FileSystem implements Serializable {
     }
     
     public void releaseBlock(int blockId){
-        int nextBlockId = byteArrayToInt(blockArray[blockId],BLOCK_SIZE-1-4);
+        boolean freeNextBlock = false;
+        int nextBlockId = byteArrayToInt(blockArray[blockId], BLOCK_SIZE-1-4);
         if(nextBlockId != -1)
-            releaseBlock(nextBlockId);
+            freeNextBlock = true;
         
         // Set next block id to -1 
         intToByteArray(-1, blockArray[blockId], BLOCK_SIZE-1-4);
         freeBlocks[blockId] = true;
+        
+        //Release next block if any
+        if(freeNextBlock)
+            releaseBlock(nextBlockId);
     }
     
     public int touchFile(String fileName, boolean asFolder){
