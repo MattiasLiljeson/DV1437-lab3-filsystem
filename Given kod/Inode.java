@@ -46,7 +46,7 @@ public class Inode {
         byte[] block = new byte[FileSystem.BLOCK_SIZE];
         block[0] = type;
         FileSystem.intToByteArray(size, block, 1);
-        FileSystem.intToByteArray(size, block, 5);
+        FileSystem.intToByteArray(dataPtr, block, 5);
         return block;
     } 
     

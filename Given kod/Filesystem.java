@@ -74,7 +74,7 @@ class FileSystem implements Serializable {
         }
         
         // Set up the root folder and its inode
-        Inode inode = new Inode();
+        Inode inode = new Inode(true);
         blockArray[0] = inode.save();
         FolderBlock folderBlock = new FolderBlock();
         writeFile(0,FolderBlock.save(folderBlock));
@@ -237,6 +237,7 @@ class FileSystem implements Serializable {
 //            }
             
             int writtenBytes = 0;
+            int writtenBlocks = 0;
 
             Inode inode = new Inode(blockArray[fileId]);           
             inode.setSize(data.length);
@@ -248,11 +249,15 @@ class FileSystem implements Serializable {
             
             boolean done = false;
             while(!done){
-                for (int i = 0; i < BLOCK_SIZE-4; i++) {
-                    blockArray[blockId][i] = data[i+writtenBytes];
+                int i = 0;
+                while(i < BLOCK_SIZE-4 && writtenBytes < data.length ) {
+                    blockArray[blockId][i] = data[i+BLOCK_SIZE*writtenBlocks];
+                    writtenBytes++;
+                    i++;
                 }
-                writtenBytes += BLOCK_SIZE;
+                writtenBlocks++;
                 freeBlocks[blockId] = false;
+                
                 
                 int nextBlockId = byteArrayToInt(blockArray[blockId], BLOCK_SIZE-1-4);
                 if(writtenBytes < data.length){
