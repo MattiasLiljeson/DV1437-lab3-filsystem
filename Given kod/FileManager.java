@@ -20,14 +20,29 @@ public class FileManager {
     }
 
     public String ls(String[] p_asPath) {
+        return ls();
+    }
+    
+    public String ls() {
         String result = "";
         String[] fileNames = fileSystem.getFolderNames();
-        for(String f : fileNames){
-            result = result + f + "\n";
+        
+        // Append all fileNames to String
+        if(fileNames.length>0){
+                result = result + fileNames[0];
         }
+        for(int i=1; i<fileNames.length; i++){
+            result = result + "\n" + fileNames[i];
+        }
+        
+        // If no files
         if(fileNames.length == 0){
             result = "<empty>";
+        }else{
+            result = "<" + fileNames.length + " Files>\n" + result;
         }
+        
+        //Return
         return result;
     }
 
@@ -99,7 +114,9 @@ public class FileManager {
         return new String("");
     }
     
-    public String cd(String[] path) { 
+    public String cd(String[] path) {
+        String result = "";
+        
         // Backup old workdir
          Stack<String> tmp_workDir = (Stack<String>) workDir.clone();
         
@@ -118,12 +135,14 @@ public class FileManager {
          
          // Restore workDir if new workDir doesn't exist in filesystem
          if(fileSystem.setWorkDir(getWorkDirArray()) == false){
-             System.out.print("No such directory");
+             result = result + "No such directory";
              workDir = (Stack<String>) tmp_workDir.clone();
+         }else{
+             result = result + "Directory changed\n" + ls();
          }
          
          // Return
-         return new String("");
+         return result;
     }
     
     private String[] getWorkDirArray() {
