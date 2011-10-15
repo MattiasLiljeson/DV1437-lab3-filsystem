@@ -30,13 +30,13 @@ public class FileManager {
         
         
         // Append all folders to String
-        result = "<" + folderNames.length + " folders>";
+        result = "<" + folderNames.length + " folder>";
         for(int i=0; i<folderNames.length; i++){
             result = result + "\n" + folderNames[i];
         }
         
         // Append all files to String
-        result = result + "\n<" + fileNames.length + " files>";
+        result = result + "\n<" + fileNames.length + " file>";
         for(int i=0; i<fileNames.length; i++){
             result = result + "\n" + fileNames[i];
         }
@@ -53,11 +53,20 @@ public class FileManager {
     public String create(String[] p_asPath, byte[] data) {
         String result = ""; 
         String name = p_asPath[0] +".file";
-        
-        if(fileSystem.touchFile(name, false) != -1){
-           result = "File created";
-        }else
-        {
+  
+        //Create file
+        if (fileSystem.touchFile(name, false) != -1) {
+            result = "File created";
+            //Write data to file
+            for(int i=0; i<data.length; i++)
+            data[i] = 8;
+            if(fileSystem.writeToFile(name, data)){
+                result = result + "\nWrite succeeded";
+            }else {
+                result = result + "\nWrite failed";
+            }
+            
+        } else {
             result = "Name already exists";
         }
         

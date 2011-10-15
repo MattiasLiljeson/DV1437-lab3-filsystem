@@ -160,6 +160,19 @@ class FileSystem implements Serializable {
         return workDir.getFileNames();
     }
     
+    public int getNextBlockId(int blockId) {
+        int id = byteArrayToInt(blockArray[blockId], BLOCK_SIZE-4);
+        return id;
+    }
+    
+    public void setNextBlockId(int blockId, int nextBlockId) {
+        try{
+        intToByteArray(nextBlockId, blockArray[blockId], BLOCK_SIZE-4);
+        } catch(Exception ex){
+            ex.printStackTrace();
+        }
+    }
+    
     public String[] getFolderNames() {
         String[] files = getFileNames();
         ArrayList<String> folders = new ArrayList<String>(); 
@@ -240,14 +253,17 @@ class FileSystem implements Serializable {
 
             boolean done = false;
             while(!done){
-                int numOfBytesToRead = BLOCK_SIZE-1-4;
+                int numOfBytesToRead = BLOCK_SIZE-4;
                 if(numOfBytesToRead >= data.length-readBytes)
                     numOfBytesToRead = data.length-readBytes;
                 System.arraycopy(blockArray[blockId], 0, data, readBytes, numOfBytesToRead);
                 readBytes += numOfBytesToRead;
 
-                if(readBytes < data.length)
-                    blockId = byteArrayToInt(blockArray[blockId], BLOCK_SIZE-1-4);
+                // Continue reading next block if data remains
+                if(readBytes < data.length){
+                    blockId = getNextBlockId(blockId);
+                }
+                   
                 else
                     done = true;          
             }
@@ -262,12 +278,12 @@ class FileSystem implements Serializable {
      */
     public void releaseBlock(int blockId){
         boolean freeNextBlock = false;
-        int nextBlockId = byteArrayToInt(blockArray[blockId], BLOCK_SIZE-1-4);
+        int nextBlockId = getNextBlockId(blockId);
         if(nextBlockId != -1)
             freeNextBlock = true;
         
-        // Set next block id to -1 
-        intToByteArray(-1, blockArray[blockId], BLOCK_SIZE-1-4);
+        // Set next block id to -1
+        setNextBlockId(blockId, -1);
         freeBlocks[blockId] = true;
         
         //Release next block if any
@@ -325,8 +341,8 @@ class FileSystem implements Serializable {
      * be the same as the block size 
      * @return 
      */
-    public int writeFile(int inodeId, byte[] data) {
-        int result = 0;
+    public boolean writeFile(int inodeId, byte[] data) {
+        boolean result = false;
         if (isIdValid(inodeId)) {
             
             int writtenBytes = 0;
@@ -345,8 +361,13 @@ class FileSystem implements Serializable {
             boolean done = false;
             while(!done){
                 int i = 0;
-                while(i < BLOCK_SIZE-1-4 && writtenBytes < data.length ) {
-                    blockArray[dataId][i] = data[i+BLOCK_SIZE*writtenBlocks];
+                while(i < BLOCK_SIZE-4 && writtenBytes < data.length ) {
+                    try{
+                    blockArray[dataId][i] = data[writtenBytes];
+                    }catch(Exception ex){
+                        ex.printStackTrace();
+                         i = 0;
+                    }
                     writtenBytes++;
                     i++;
                 }
@@ -354,25 +375,34 @@ class FileSystem implements Serializable {
                 freeBlocks[dataId] = false;
                 
                 
-                int nextBlockId = byteArrayToInt(blockArray[dataId], BLOCK_SIZE-1-4);
+                int nextBlockId = getNextBlockId(dataId);
                 if(writtenBytes < data.length){
                     if(nextBlockId == -1){
-                        dataId = getFreeBlock();
-                        intToByteArray(nextBlockId, blockArray[dataId], BLOCK_SIZE-1-4);
+                        nextBlockId = getFreeBlock();
+                        setNextBlockId(dataId, nextBlockId);
                     }
-                    else{
-                        dataId = nextBlockId;
-                    }
+                    dataId = nextBlockId;
                 }
                 else {
                     done = true;
                     if(nextBlockId != -1)
                         releaseBlock(nextBlockId);
+                    
                 }
             }
-        }else{
-            // Block out-of-range
-            result = -1;
+            result = true;
+        }
+        return result;
+    }
+    
+    public boolean writeToFile(String name, byte[] data) {
+        boolean result = false;
+        int id = workDir.getFileId(name);
+        
+        // If file exist and is not a folder
+        if(id != -1 && isAFolder(id) == false){
+            // Write data
+            result = writeFile(id, data);
         }
         return result;
     }
