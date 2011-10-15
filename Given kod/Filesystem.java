@@ -1,6 +1,7 @@
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.ArrayList;
 
 class FileSystem implements Serializable {
     //
@@ -155,9 +156,28 @@ class FileSystem implements Serializable {
         return folderId;
     }
     
+    public String[] getFileNames() {
+        return workDir.getFileNames();
+    }
+    
     public String[] getFolderNames() {
-        String[] folders = workDir.getFileNames();
-        return folders;
+        String[] files = getFileNames();
+        ArrayList<String> folders = new ArrayList<String>(); 
+        for (String f : files) {
+            if(isAFolder(f))
+                folders.add(f);
+        } 
+        return folders.toArray(new String[folders.size()]);
+    }
+    
+    public String[] getNonFolderNames() {
+        String[] files = getFileNames();
+        ArrayList<String> folders = new ArrayList<String>(); 
+        for (String f : files) {
+            if(isAFolder(f) == false)
+                folders.add(f);
+        } 
+        return folders.toArray(new String[folders.size()]);
     }
     
     /**
@@ -179,6 +199,14 @@ class FileSystem implements Serializable {
         }
 
         //Return
+        return result;
+    }
+    
+    public boolean isAFolder(String fileName) {
+        boolean result = false;
+        int id = workDir.getFileId(fileName);
+        if(id != -1)
+            result = isAFolder(id);
         return result;
     }
     

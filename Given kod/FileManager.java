@@ -25,32 +25,43 @@ public class FileManager {
     
     public String ls() {
         String result = "";
-        String[] fileNames = fileSystem.getFolderNames();
+        String[] folderNames = fileSystem.getFolderNames();
+        String[] fileNames = fileSystem.getNonFolderNames();
         
-        // Append all fileNames to String
-        if(fileNames.length>0){
-                result = result + fileNames[0];
+        
+        // Append all folders to String
+        result = "<" + folderNames.length + " folders>";
+        for(int i=0; i<folderNames.length; i++){
+            result = result + "\n" + folderNames[i];
         }
-        for(int i=1; i<fileNames.length; i++){
+        
+        // Append all files to String
+        result = result + "\n<" + fileNames.length + " files>";
+        for(int i=0; i<fileNames.length; i++){
             result = result + "\n" + fileNames[i];
         }
         
         // If no files
-        if(fileNames.length == 0){
+        if(fileNames.length == 0 && folderNames.length == 0){
             result = "<empty>";
-        }else{
-            result = "<" + fileNames.length + " Files>\n" + result;
         }
         
         //Return
         return result;
     }
 
-    public String create(String[] p_asPath, byte[] p_abContents) {
-        System.out.print("Creating file ");
-        dumpArray(p_asPath);
-        System.out.print("");
-        return new String("");
+    public String create(String[] p_asPath, byte[] data) {
+        String result = ""; 
+        String name = p_asPath[0] +".file";
+        
+        if(fileSystem.touchFile(name, false) != -1){
+           result = "File created";
+        }else
+        {
+            result = "Name already exists";
+        }
+        
+        return result;
     }
 
     public String cat(String[] p_asPath) {
@@ -105,13 +116,14 @@ public class FileManager {
     }
 
     public String mkdir(String[] name) {
+        String result = ""; 
         if(fileSystem.touchFile(name[0], true) != -1){
-            System.out.print("Directory created");
+            result = "Directory created";
         }else
         {
-            System.out.print("Directory already exists");
+            result = "Name already exists";
         }
-        return new String("");
+        return result;
     }
     
     public String cd(String[] path) {

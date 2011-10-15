@@ -80,16 +80,12 @@ public class FolderBlock implements Serializable{
         return success;
     }
     
-//    public Map<String, Integer> getFileListing(){
-//        return folderContentsMap;
-//    }
-    
     public int getFileId(String name){
-        return folderContentsMap.get(name);
-    }
-    
-    public int isFileId(String name){
-        return folderContentsMap.get(name);
+        int result = -1;
+        Integer id = folderContentsMap.get(name);
+        if(id != null)
+            result = id;
+        return result;
     }
     
     public boolean isFileInFolder(String fileName){
@@ -102,7 +98,7 @@ public class FolderBlock implements Serializable{
     
     public String[] getFileNames(){
         Set<String> set = folderContentsMap.keySet();
-        return (String[])set.toArray(new String[set.size()]);   
+        return set.toArray(new String[set.size()]);   
     }
     
     public int getInodePtrFromString(String fileName){
