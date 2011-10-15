@@ -271,6 +271,23 @@ class FileSystem implements Serializable {
         return data;
     }
     
+    public String readTextFromFile(String fileName) {
+        String text = "";
+        int id = workDir.getFileId(fileName);
+        if (id == -1) {
+            text = "No such file";
+        } else {
+            byte[] data = readFile(id);
+            text = "Content of file (size " + data.length + " bytes):\n"; 
+            
+            if(data.length>0)
+                text = text + data.toString();
+            else
+                text = text + "<empty>";
+        }
+        return text;
+    }
+    
     /**
      * Sets the block, and all of the blocks it points to via its nextBlock, 
      * nextBlock to -1. This is done to prepare the block for new data.

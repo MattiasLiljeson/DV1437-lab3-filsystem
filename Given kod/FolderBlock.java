@@ -80,6 +80,11 @@ public class FolderBlock implements Serializable{
         return success;
     }
     
+    /**
+     * Returns the ID of a file if it can be found in folder.
+     * @param The name of the file.
+     * @return The ID of the file, or -1 if file couldn't be found.
+     */
     public int getFileId(String name){
         int result = -1;
         Integer id = folderContentsMap.get(name);

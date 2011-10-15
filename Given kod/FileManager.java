@@ -16,6 +16,8 @@ public class FileManager {
     }
 
     public String format() {
+        fileSystem.format();
+        workDir = new Stack<String>();
         return new String("Diskformat successful");
     }
 
@@ -46,7 +48,7 @@ public class FileManager {
             result = "<empty>";
         }
         
-        //Return
+        // Return
         return result;
     }
 
@@ -59,7 +61,7 @@ public class FileManager {
             result = "File created";
             //Write data to file
             for(int i=0; i<data.length; i++)
-            data[i] = 8;
+            data[i] = (byte)i;
             if(fileSystem.writeToFile(name, data)){
                 result = result + "\nWrite succeeded";
             }else {
@@ -74,10 +76,8 @@ public class FileManager {
     }
 
     public String cat(String[] p_asPath) {
-        System.out.print("Dumping contents of file ");
-        dumpArray(p_asPath);
-        System.out.print("");
-        return new String("");
+        String fileName = p_asPath[0];
+        return fileSystem.readTextFromFile(fileName);
     }
 
     public String save(String p_sPath) {
