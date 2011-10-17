@@ -288,6 +288,76 @@ class FileSystem implements Serializable {
         return text;
     }
     
+    public boolean removeFile(String fileName) {
+        return removeFile(fileName, workDir, workDirId);
+    }
+
+    public boolean removeFile(String fileName, FolderBlock folder, int folderId) {
+        boolean succees = false;
+        int id = folder.getFileId(fileName);
+        
+        // If file exist in parent folder
+        if(id != -1){
+            
+            // If file is a folder
+            if(isAFolder(id)){
+                // Empty folder 
+                FolderBlock subFolder = FolderBlock.load(readFile(id));
+                emptyFolder(subFolder, id);
+            }
+            
+            // Delete file and its inode from memory
+            Inode inode = new Inode(blockArray[id]);
+            int blockId = inode.getDataPtr();
+            releaseBlock(blockId);
+            releaseBlock(id);
+            
+            // Delete file from parent folder
+            succees = folder.removeFile(fileName);
+            
+            //Save changes done to parent folder
+            writeFile(folderId, FolderBlock.save(folder));
+        }
+        return succees;
+    }
+    
+    public boolean emptyFolder(FolderBlock folder, int folderId) {
+        boolean result = false;
+        String[] files = folder.getFileNames();
+        
+        // For every file in folder
+        for (String f : files) {
+            
+            // If file is a folder
+            if(isAFolder(f)){
+                
+                // Empty sub-folder
+                int subFolderId = workDir.getFileId(f);
+                FolderBlock subFolder = FolderBlock.load(readFile(subFolderId));
+                emptyFolder(subFolder, subFolderId);
+                
+                // Delete file and its inode
+                Inode inode = new Inode(blockArray[subFolderId]);           
+                int blockId = inode.getDataPtr();
+                releaseBlock(blockId);
+                releaseBlock(subFolderId);
+                
+                // Remove file from folder
+                result = folder.removeFile(f);
+                
+            }else{
+                //Delete file from folder
+                removeFile(f, folder, folderId);
+            } 
+        }
+        
+        //Save changes done to parent folder
+        writeFile(folderId, FolderBlock.save(folder));
+        
+        return result;
+    }
+    
+    
     /**
      * Sets the block, and all of the blocks it points to via its nextBlock, 
      * nextBlock to -1. This is done to prepare the block for new data.
@@ -324,9 +394,10 @@ class FileSystem implements Serializable {
             Inode inode = new Inode(asFolder);
             inode.setSize(0);
 
-            // Save to the block array so writeFile() can find it
+            // Save inode so writeFile() can find it
             writeInode(inodeBlock, inode);
 
+            // If folder, create and save new folderBlock
             if (asFolder) {
                 FolderBlock folderBlock = new FolderBlock();
                 writeFile(inodeBlock, FolderBlock.save(folderBlock));

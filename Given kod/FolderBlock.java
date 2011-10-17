@@ -80,6 +80,13 @@ public class FolderBlock implements Serializable{
         return success;
     }
     
+    public boolean removeFile(String name){
+        boolean success = false;
+        if(folderContentsMap.remove(name) != null)
+            success = true;
+        return success;
+    }
+    
     /**
      * Returns the ID of a file if it can be found in folder.
      * @param The name of the file.

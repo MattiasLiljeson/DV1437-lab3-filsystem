@@ -91,10 +91,15 @@ public class FileManager {
     }
 
     public String rm(String[] p_asPath) {
-        System.out.print("Removing file ");
-        dumpArray(p_asPath);
-        System.out.print("");
-        return new String("");
+        String result = "No such file";
+        String name = p_asPath[0];
+
+        //Create file
+        if (fileSystem.removeFile(name)) {
+            result = "File removed";
+        }
+
+        return result;
     }
 
     public String copy(String[] p_asSource, String[] p_asDestination) {
