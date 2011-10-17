@@ -332,7 +332,7 @@ class FileSystem implements Serializable {
             if(isAFolder(f)){
                 
                 // Empty sub-folder
-                int subFolderId = workDir.getFileId(f);
+                int subFolderId = folder.getFileId(f);
                 FolderBlock subFolder = FolderBlock.load(readFile(subFolderId));
                 emptyFolder(subFolder, subFolderId);
                 
