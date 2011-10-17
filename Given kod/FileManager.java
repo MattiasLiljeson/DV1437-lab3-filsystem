@@ -121,12 +121,15 @@ public class FileManager {
     }
 
     public String rename(String[] p_asSource, String[] p_asDestination) {
-        System.out.print("Renaming file ");
-        dumpArray(p_asSource);
-        System.out.print(" to ");
-        dumpArray(p_asDestination);
-        System.out.print("");
-        return new String("");
+        String result = "";
+        String oldName = p_asSource[0];
+        String newName = p_asDestination[0];
+        if(fileSystem.rename(oldName, newName)){
+            result = "File renamed";
+        }else{
+            result = "Couldn't rename";
+        }
+        return result;
     }
 
     public String mkdir(String[] name) {

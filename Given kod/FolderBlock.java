@@ -87,6 +87,17 @@ public class FolderBlock implements Serializable{
         return success;
     }
     
+   public boolean rename(String oldName, String newName) {
+        boolean success = false;
+        if(isFileInFolder(oldName)){
+            int id = getFileId(oldName);
+            if(addFile(id, newName)){
+                success = removeFile(oldName);
+            }
+        }
+        return success;
+    }
+    
     /**
      * Returns the ID of a file if it can be found in folder.
      * @param The name of the file.

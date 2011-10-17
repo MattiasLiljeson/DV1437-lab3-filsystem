@@ -156,6 +156,61 @@ class FileSystem implements Serializable {
         return folderId;
     }
     
+    public FolderBlock getFolder(String[] path) {
+        FolderBlock folder = null;
+        int id = getFolderId(path);
+        if(id != 0){
+            workDir = FolderBlock.load(readFile(id));
+        }
+        return folder;
+    }
+    
+    public String copy(String[] sourcePath, String[] destPath) {
+        String result = "";
+        
+        // Fetch source folder
+        FolderBlock source = getFolder(sourcePath);
+        if(source == null){
+            result = "Source invalid";
+        } else {
+            
+            // Fetch destination folder
+            FolderBlock dest = getFolder(sourcePath);
+            if (dest == null) {
+                result = "Destination invalid";
+            } else {
+                
+                
+            }
+        }
+        
+        // Destination id
+        return result;
+    }
+    
+    public void copy (int source, String[] dest) {
+    }
+    
+    public boolean rename(String oldName, String newName) {
+        return rename(workDir, oldName, newName);
+    }
+    
+    public boolean rename(FolderBlock folder, String oldName, String newName) {
+        return folder.rename(oldName, newName);
+    }
+    
+    // Get just the folder path of a full path
+    public String[] getFolderPath(String[] path) {
+        String[] folderPath = new String[0];
+        if (path.length > 0) {
+            folderPath = new String[path.length - 1];
+            for (int i = 0; i < path.length - 1; i++) {
+                folderPath[i] = path[i];
+            }
+        } 
+        return folderPath;
+    }
+    
     public String[] getFileNames() {
         return workDir.getFileNames();
     }
