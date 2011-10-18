@@ -101,7 +101,9 @@ public class Shell {
                         if (asCommandArray.length != 3) {
                             System.out.println("Usage: copy <source> <destination>");
                         } else {
-                            System.out.println(fileManager.copy(split(asCommandArray[1], '/'), split(asCommandArray[2], '/')));
+                            String[] src = split(asCommandArray[1], '/');
+                            String[] dst = split(asCommandArray[2], '/');
+                            System.out.println(fileManager.copy(src, dst));
                         }
                         break;
 

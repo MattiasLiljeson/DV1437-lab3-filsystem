@@ -165,42 +165,55 @@ class FileSystem implements Serializable {
     public String copy(String[] srcPath, String[] dstPath) {
         String result = "";
         
+        /* NOTE TO SELF : Prolonged exposure to large "if else" statments could 
+         * result in, lack of sleep, hair loss, swearing, insanity and/or eye cancer.
+         */
+        
         // Lookup source
-        FolderBlock srcFolder = getFolder(getFolderPath(dstPath));
+        FolderBlock srcFolder = getFolder(getFolderPath(srcPath));
         if (srcFolder == null) {
-            return "Source folder invalid";
-        }
-        if (srcPath.length < 1) {
-            return "Corrupted path"; // This should be relativly impossible to happen
-        }
-        String srcName = srcPath[srcPath.length - 1];
-        int scrId = srcFolder.getFileId(srcName);
-        if(scrId == -1){
-            return "No source file";
-        }
+            result = "Source folder invalid";
+        } else {
+            if (srcPath.length < 1) {
+                // This option should be prevented by "Shell.java" 
+                result = "Corrupt source path";
+            } else {
+                String srcName = srcPath[srcPath.length - 1];
+                int scrId = srcFolder.getFileId(srcName);
+                if (scrId == -1) {
+                    result = "No source file found";
+                } else {
+                    
+                    // Lookup destination folder
+                    int dstFolderId = getFolderId(getFolderPath(dstPath));
+                    if (dstFolderId == -1) {
+                        result = "Destination folder invalid";
+                    } else {
+                        if (dstPath.length < 1) {
+                            result = "Corrupt destination path"; // Relativly impossible to happen
+                        } else {
+                            String dstName = dstPath[dstPath.length - 1];
+               
+                            // Lookup destination file name
+                            FolderBlock dstFolder = FolderBlock.load(readFile(dstFolderId));
+                            if (dstFolder.isFileInFolder(dstName)) {
+                                result = "Destination name already exist";
+                            } else {
 
-        // Lookup destination folder
-        int dstFolderId = getFolderId(dstPath);
-        if (dstFolderId == -1) {
-            return "Destination folder invalid";
-        }
-        if (dstPath.length < 1) {
-            return "Corrupted path"; // This should be relativly impossible to happen
-        }
-        String dstName = srcPath[srcPath.length - 1];
-        
-        // Lookup destination file name
-        FolderBlock dstFolder = FolderBlock.load(readFile(dstFolderId));
-        if(dstFolder.isFileInFolder(dstName)){
-            return "Destination name already exists";
+                                // Perform copy
+                                if (copyFile(srcName, dstName, scrId, dstFolderId)) {
+                                    result = "File copied";
+                                } else {
+                                    result = "Copying failed";
+                                } 
+                            }
+                        }
+                    }
+                }
+            }
         }
         
-        // Perform copy
-        if(copyFile(srcName, dstName, scrId, dstFolderId)){
-            result = "File copied";
-        }
-            
-        
+        // Did we succeed or not?
         return result;
     }
     
@@ -215,30 +228,32 @@ class FileSystem implements Serializable {
         if (isAFolder(scrId)) {
             
             // Create new folder in destination folder
-            touchFile(scrName, true, dstFolderId);
-                    
-            // Fetch files in source
-            FolderBlock srcFolder = FolderBlock.load(readFile(scrId));
-            String[] files = srcFolder.getFileNames();
+            int newFolderId = touchFile(dstName, true, dstFolderId);
+            if (newFolderId != -1) {
+                result = true;
 
-            // For every file
-            for (String f : files) {
-                
-                // Fetch new destination folder and continue deep copying
-                int fileId = srcFolder.getFileId(f);
-                FolderBlock dstFolder = FolderBlock.load(readFile(dstFolderId));
-                int destFolderId = dstFolder.getFileId(f);
-                copyFile(f, fileId, destFolderId);
+                // Fetch files in source
+                FolderBlock srcFolder = FolderBlock.load(readFile(scrId));
+                String[] files = srcFolder.getFileNames();
+
+                // For every file
+                for (String f : files) {
+                    // Fetch new destination folder and continue deep copying
+                    int fileId = srcFolder.getFileId(f);
+                    result = copyFile(f, fileId, newFolderId);
+                }
             }
-            
         } else {
             
             // Create new file in destination folder
-            touchFile(scrName, false, dstFolderId);
-            
-            // Copy source file and write content to new file
-            byte[] file = readFile(scrId);
-            writeFile(dstFolderId, file);
+            int dstId = touchFile(dstName, false, dstFolderId);
+            if (dstId != -1) {
+                result = true;
+
+                // Copy source file and write content to new file
+                byte[] file = readFile(scrId);
+                writeFile(dstId, file);
+            }
         }
         return result;
     }
@@ -271,11 +286,7 @@ class FileSystem implements Serializable {
     }
     
     public void setNextBlockId(int blockId, int nextBlockId) {
-        try{
         intToByteArray(nextBlockId, blockArray[blockId], BLOCK_SIZE-4);
-        } catch(Exception ex){
-            ex.printStackTrace();
-        }
     }
     
     public String[] getFolderNames() {
@@ -333,15 +344,15 @@ class FileSystem implements Serializable {
         return ((NUM_BLOCKS > blockId) && (blockId >= 0));
     }
     
-    /**
-     * Looks up if a file exists in a supplied folder.
-     * @param fileName Name of the file.
-     * @return true if file exists. 
-     */ 
-    public boolean isFileInFolder(String fileName){
-        FolderBlock workDir = FolderBlock.load(readFile(workDirId));
-        return workDir.isFileInFolder(fileName);
-    }
+//    /**
+//     * Looks up if a file exists in a supplied folder.
+//     * @param filename of the file and Id of the folderBlock.
+//     * @return true if file exists. 
+//     */ 
+//    public boolean isFileInFolder(String fileName, int folderId){
+//        FolderBlock folder = FolderBlock.load(readFile(folderId));
+//        return folder.isFileInFolder(fileName);
+//    }
     
     /**
      * Read a file from the file system.
@@ -503,10 +514,11 @@ class FileSystem implements Serializable {
     }
     
     public int touchFile(String fileName, boolean asFolder, int folderId) {
+
         FolderBlock folder = FolderBlock.load(readFile(folderId));
         
         int result = -1;
-        if (isFileInFolder(fileName) == false) {
+        if (folder.isFileInFolder(fileName) == false) {
             int inodeBlock = getFreeBlock();
             Inode inode = new Inode(asFolder);
             inode.setSize(0);
