@@ -103,12 +103,7 @@ public class FileManager {
     }
 
     public String copy(String[] p_asSource, String[] p_asDestination) {
-        System.out.print("Copying file from ");
-        dumpArray(p_asSource);
-        System.out.print(" to ");
-        dumpArray(p_asDestination);
-        System.out.print("");
-        return new String("");
+        return fileSystem.copy(p_asSource, p_asDestination);
     }
 
     public String append(String[] p_asSource, String[] p_asDestination) {
