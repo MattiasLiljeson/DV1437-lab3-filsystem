@@ -1,6 +1,5 @@
 
 import java.io.Serializable;
-import java.util.Map;
 import java.util.ArrayList;
 
 class FileSystem implements Serializable {
@@ -400,7 +399,7 @@ class FileSystem implements Serializable {
             text = "Content of file (size " + data.length + " bytes):\n"; 
             
             if(data.length>0)
-                text = text + data.toString();
+                text = text + new String(data);
             else
                 text = text + "<empty>";
         }

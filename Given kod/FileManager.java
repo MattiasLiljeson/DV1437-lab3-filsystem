@@ -1,4 +1,9 @@
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Stack;
 
 public class FileManager {
@@ -61,9 +66,9 @@ public class FileManager {
             result = "File created";
       
             // TODO :  Since String to byte[] doesn't work, this is used to generated data instead
-            for (int i = 0; i < data.length; i++) {
-                data[i] = (byte) i;
-            }
+//            for (int i = 0; i < data.length; i++) {
+//                data[i] = (byte) i;
+//            }
 
             //Write data to file
             if(fileSystem.writeToFile(name, data)){
@@ -83,15 +88,48 @@ public class FileManager {
         String fileName = p_asPath[0];
         return fileSystem.readTextFromFile(fileName);
     }
-
+    
+    /*
+     * Save as a UNIX file. what is a UNIX file? Wikipeida says nothing. Our 
+     * guess is that it is a file without a file extension. Thats how we choose 
+     * to implement it.
+     */
     public String save(String p_sPath) {
         System.out.print("Saving blockdevice to file " + p_sPath);
-        return new String("");
+        String result = "Writing file failed";
+        
+        try{
+            FileOutputStream fs = new FileOutputStream(p_sPath);
+            ObjectOutputStream os = new ObjectOutputStream(fs);
+            os.writeObject(fileSystem);
+            os.close();
+            result = "File written successfully";
+        }
+        catch(IOException ex) {
+            result = "Failed to save file. IO error";
+        }
+        
+        return result;
     }
 
     public String read(String p_sPath) {
         System.out.print("Reading file " + p_sPath + " to blockdevice");
-        return new String("");
+        String result = "Loading file failed";
+        
+        try{
+            FileInputStream fileStream = new FileInputStream(p_sPath);
+            ObjectInputStream os = new ObjectInputStream(fileStream);
+            fileSystem = (FileSystem)os.readObject();
+            result = "File loaded";
+        }
+        catch(IOException ex) {
+            result = "File not found or other IO error";
+        }
+        catch(ClassNotFoundException ex) {
+            result = "Wrong type of file or from other version of program";
+        }
+        
+        return result;
     }
 
     public String rm(String[] p_asPath) {
