@@ -16,7 +16,7 @@ public class FileManager {
 
     public FileManager(FileSystem p_BlockDevice) {
         fileSystem = p_BlockDevice;
-        fileSystem.format();
+        format();
         
         // Add root map
         workPath = new Stack<String>();
@@ -148,6 +148,7 @@ public class FileManager {
         try{
             FileInputStream fileStream = new FileInputStream(p_sPath);
             ObjectInputStream os = new ObjectInputStream(fileStream);
+            format();
             fileSystem = (FileSystem)os.readObject();
             result = "File loaded successfully";
         }
