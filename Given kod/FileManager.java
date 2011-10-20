@@ -43,13 +43,13 @@ public class FileManager {
         
         
         // Append all folders to String
-        result = "<" + folderNames.length + " folder>";
+        result = "<" + folderNames.length + " folder(s)>";
         for(int i=0; i<folderNames.length; i++){
             result = result + "\n" + folderNames[i];
         }
         
         // Append all files to String
-        result = result + "\n<" + fileNames.length + " file>";
+        result = result + "\n<" + fileNames.length + " file(s)>";
         for(int i=0; i<fileNames.length; i++){
             result = result + "\n" + fileNames[i];
         }
