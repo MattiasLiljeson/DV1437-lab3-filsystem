@@ -4,6 +4,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.util.Stack;
 
 public class FileManager {
@@ -18,6 +20,10 @@ public class FileManager {
         
         // Add root map
         workPath = new Stack<String>();
+        
+        // Load example filestructure
+        System.out.println(read("default"));
+        
     }
 
     public String format() {
@@ -56,21 +62,44 @@ public class FileManager {
         // Return
         return result;
     }
+    
+    // Loads a file and makes it into a file in the filesytem
+    public String loadfile(String fileName) {
+        String result = ""; 
+        StringBuilder content = new StringBuilder();
+
+        try {
+            // Read content
+            BufferedReader in = new BufferedReader(new FileReader(fileName));
+            String line = null;
+            while ((line = in.readLine()) != null) {
+                content.append(line).append(System.getProperty("line.separator"));
+            }
+            in.close();
+            
+            // Write content to new file
+            String[] p_asPath = new String[1];
+            p_asPath[0] = fileName;
+            result = create(p_asPath, content.toString().getBytes());
+        } catch (Exception e) {
+            result = "File not found";
+        }
+
+        return result;
+    }
 
     public String create(String[] p_asPath, byte[] data) {
         String result = ""; 
-        String name = p_asPath[0] +".file";
-  
-        //Create file
+        String name = p_asPath[0];
+        
+        // Add "new line" to text to make it more readable in case we append two files.
+        data[data.length-1] = '\n';
+        
+        // Create file
         if (fileSystem.touchFile(name, false) != -1) {
             result = "File created";
-      
-            // TODO :  Since String to byte[] doesn't work, this is used to generated data instead
-//            for (int i = 0; i < data.length; i++) {
-//                data[i] = (byte) i;
-//            }
 
-            //Write data to file
+            // Write data to file
             if(fileSystem.writeToFile(name, data)){
                 result = result + "\nWrite succeeded";
             }else {
@@ -95,7 +124,7 @@ public class FileManager {
      * to implement it.
      */
     public String save(String p_sPath) {
-        System.out.print("Saving blockdevice to file " + p_sPath);
+        System.out.print("Saving blockdevice to file \"" + p_sPath+"\"\n");
         String result = "Writing file failed";
         
         try{
@@ -113,14 +142,14 @@ public class FileManager {
     }
 
     public String read(String p_sPath) {
-        System.out.print("Reading file " + p_sPath + " to blockdevice");
+        System.out.print("Reading file \"" + p_sPath + "\" to blockdevice\n");
         String result = "Loading file failed";
         
         try{
             FileInputStream fileStream = new FileInputStream(p_sPath);
             ObjectInputStream os = new ObjectInputStream(fileStream);
             fileSystem = (FileSystem)os.readObject();
-            result = "File loaded";
+            result = "File loaded successfully";
         }
         catch(IOException ex) {
             result = "File not found or other IO error";
@@ -156,12 +185,15 @@ public class FileManager {
     }
 
     public String append(String[] p_asSource, String[] p_asDestination) {
-        System.out.print("Appending file ");
-        dumpArray(p_asSource);
-        System.out.print(" to ");
-        dumpArray(p_asDestination);
-        System.out.print("");
-        return new String("");
+         // Get the full source path
+        String[] src = getAddedPath(p_asSource);
+        
+        // Get the full destination path
+        String[] dst = getAddedPath(p_asDestination);
+  
+
+        // Append files
+        return fileSystem.mergeFiles(src, dst);
     }
 
     public String rename(String[] p_asSource, String[] p_asDestination) {
@@ -243,7 +275,7 @@ public class FileManager {
     // Returns an array with the combined workpath and addedPath
     private String[] getAddedPath(String[] addedPath) {
         Stack<String> path = getAddedPathStack(addedPath);
-         
+        
          return path.toArray(new String[path.size()]);
     }
 }

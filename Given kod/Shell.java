@@ -18,7 +18,7 @@ public class Shell {
 
     public void start() {
         String[] asCommands = {"quit", "format", "ls", "create", "cat", "save", "read",
-            "rm", "copy", "append", "rename", "mkdir", "cd", "pwd", "help"};
+            "rm", "copy", "append", "rename", "mkdir", "cd", "pwd", "help", "load"};
 
         boolean bRun = true;
         String sCommand;
@@ -149,6 +149,14 @@ public class Shell {
 
                     case 14: // help
                         printHelp();
+                        break;
+                        
+                    case 15: // load file
+                        if (asCommandArray.length != 2) {
+                            System.out.println("Usage: loadfile <real-file>");
+                        } else {
+                            System.out.println(fileManager.loadfile(asCommandArray[1]));
+                        }
                         break;
 
                     default:

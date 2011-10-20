@@ -161,6 +161,100 @@ class FileSystem implements Serializable {
         return folder;
     }
     
+    public boolean appendToFile(String name, byte[] newData) {
+        boolean result = false;
+        FolderBlock workDir = FolderBlock.load(readFile(workDirId));
+        int id = workDir.getFileId(name);
+        
+        // If file exist and is not a folder
+        if(id != -1 && isAFolder(id) == false){
+            
+            // Merge data with old data
+            byte[] oldData = readFile(id);
+            byte[] mergedData = new byte[oldData.length + newData.length];
+            System.arraycopy(oldData, 0, mergedData, 0, oldData.length);
+            System.arraycopy(newData, 0, mergedData, oldData.length, newData.length);
+            
+            // Write merged data
+            result = writeFile(id, mergedData);
+        }
+        return result;
+    }
+    
+    public String mergeFiles(String[] srcPath, String[] dstPath) {
+        String result = "";
+        
+        // Lookup source
+        FolderBlock srcFolder = getFolder(getFolderPath(srcPath));
+        if (srcFolder == null) {
+            result = "Source folder invalid";
+        } else {
+            if (srcPath.length < 1) {
+                // This option should be prevented by "Shell.java" 
+                result = "Corrupt source path";
+            } else {
+                String srcName = srcPath[srcPath.length - 1];
+                int scrId = srcFolder.getFileId(srcName);
+                if (scrId == -1) {
+                    result = "No source file found";
+                } else {
+                    if (isAFolder(scrId)) {
+                        result = "No source file found";
+                    } else {
+
+                        // Lookup destination
+                        int dstFolderId = getFolderId(getFolderPath(dstPath));
+                        if (dstFolderId == -1) {
+                            result = "Destination folder invalid";
+                        } else {
+                            if (dstPath.length < 1) {
+                                result = "Corrupt destination path"; // Relativly impossible to happen
+                            } else {
+                                String dstName = dstPath[dstPath.length - 1];
+                                FolderBlock dstFolder = FolderBlock.load(readFile(dstFolderId));
+                                if (dstFolder.isFileInFolder(dstName) == false) {
+                                    result = "No destination file found";
+                                } else {
+                                    int dstId = dstFolder.getFileId(dstName);
+                                    if (isAFolder(dstId) == false) {
+                                        result = "Destination has to be a file";
+                                    } else {
+                                    }
+
+                                    // Load source data
+                                    byte[] srcData = readFile(scrId);
+
+                                    // Add source data to destination data
+                                    byte[] dstData = readFile(dstId);
+                                    byte[] mergedData = new byte[dstData.length + srcData.length];
+                                    System.arraycopy(dstData, 0, mergedData, 0, dstData.length);
+                                    System.arraycopy(srcData, 0, mergedData, dstData.length, srcData.length);
+
+                                    // Write merged data
+                                    if (writeFile(dstId, mergedData)) {
+                                        result = "File " + srcName + " appended to file " + dstName;
+                                    }
+
+                                    // Remove source, as it is now appended to destination
+                                    int srcFolderId = getFolderId(getFolderPath(dstPath));
+                                    removeFile(srcName, srcFolderId);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Did we succeed or not?
+        return result;
+    }
+    
+    public String mergeFiles(int scrId, int dstId) {
+        
+        return "";
+    }
+    
     public String copy(String[] srcPath, String[] dstPath) {
         String result = "";
         
@@ -343,16 +437,6 @@ class FileSystem implements Serializable {
         return ((NUM_BLOCKS > blockId) && (blockId >= 0));
     }
     
-//    /**
-//     * Looks up if a file exists in a supplied folder.
-//     * @param filename of the file and Id of the folderBlock.
-//     * @return true if file exists. 
-//     */ 
-//    public boolean isFileInFolder(String fileName, int folderId){
-//        FolderBlock folder = FolderBlock.load(readFile(folderId));
-//        return folder.isFileInFolder(fileName);
-//    }
-    
     /**
      * Read a file from the file system.
      * @param fileId The ID of the file (the file inodes id).
@@ -407,12 +491,13 @@ class FileSystem implements Serializable {
     }
     
     public boolean removeFile(String fileName) {
-        FolderBlock workDir = FolderBlock.load(readFile(workDirId));
-        return removeFile(fileName, workDir, workDirId);
+        
+        return removeFile(fileName, workDirId);
     }
 
-    public boolean removeFile(String fileName, FolderBlock folder, int folderId) {
+    public boolean removeFile(String fileName, int folderId) {
         boolean succees = false;
+        FolderBlock folder = FolderBlock.load(readFile(folderId));
         int id = folder.getFileId(fileName);
         
         // If file exist in parent folder
@@ -466,7 +551,7 @@ class FileSystem implements Serializable {
                 
             }else{
                 //Delete file from folder
-                removeFile(f, folder, folderId);
+                removeFile(f, folderId);
             } 
         }
         
