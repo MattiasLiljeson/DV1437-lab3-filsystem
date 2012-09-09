@@ -10,7 +10,25 @@ class FileSystem implements Serializable {
     public final static int NUM_BLOCKS = 250;
     public final static int BLOCK_SIZE = 512;
     
+    /**
+     * Convert an int to a byte array.
+     * @param value Which int to convert.
+     * @param dst Which byte array to save to.
+     * @param start Where in the dst array to save the int.
+     * @return The dst byte array.
+     */
+    public static final byte[] intToByteArray(int value, byte[] dst, int start) {
+        byte[] tmp = intToByteArray(value); 
+        System.arraycopy(tmp, 0, dst, start, 4);
+        return dst;
+    }
+    
     // Not ours. Stolen from: http://snippets.dzone.com/posts/show/93
+    /**
+     * Convert an int to a byte array. 
+     * @param value Which int to convert. 
+     * @return A byte array with 4 elements.
+     */
     public static final byte[] intToByteArray(int value) {
         return new byte[] {
             (byte)(value >>> 24),
@@ -18,50 +36,58 @@ class FileSystem implements Serializable {
             (byte)(value >>> 8),
             (byte)value};
     }
-    public static final byte[] intToByteArray(int value, byte[] dst, int start) {
-        byte[] tmp = intToByteArray(value); 
-        System.arraycopy(tmp, 0, dst, start, 4);
-        return dst;
-    }
     
-    public static final int byteArrayToInt(byte [] b) {
-        return (b[0] << 24)
-            + ((b[1] & 0xFF) << 16)
-            + ((b[2] & 0xFF) << 8)
-            + (b[3] & 0xFF);
-    }
+    /**
+     * Convert a part of a byte array to an int.
+     * @param byteArray Which byte array to use
+     * @param start Where to start in the byte array.
+     * @return The resulting int.
+     */
     public static final int byteArrayToInt(byte[] byteArray, int start) {
         byte[] tmp = new byte[4];
         System.arraycopy(byteArray, start, tmp, 0, 4);
         return byteArrayToInt(tmp);
     }
     
+    /**
+     * Convert a 4 element byte array to an int. Does NOT look for wrong byte 
+     * array size. Just uses the 4 first elements.
+     * @param b
+     * @return 
+     */
+    public static final int byteArrayToInt(byte [] b) {
+        return (b[0] << 24)
+            + ((b[1] & 0xFF) << 16)
+            + ((b[2] & 0xFF) << 8)
+            + (b[3] & 0xFF);
+    }
+    
     //
-    // Instance  variables and methods
+    // Instance variables and methods
     //
     
     boolean[] freeBlocks = new boolean[NUM_BLOCKS];
     byte[][] blockArray = new byte[NUM_BLOCKS][BLOCK_SIZE];
-    int workDirId;
+    //int folderId;
     
 
     public FileSystem() { 
     }
     
     /**
-     * Sets workDir and workDirId. Returns false if path doesn't exist.
+     * Sets workDir and folderId. Returns false if path doesn't exist.
      * @param Path Path to look up.
      * @return The id of the last folder if the path exists and -1 if it doesn't.
      */
-    public boolean setWorkDir(String[] path){
-        boolean result = false;
-        int id = getFolderId(path);
-        if(id != -1){
-            workDirId = id;
-            result = true;  
-        }
-        return result;
-    }
+//    public boolean setWorkDir(String[] path){
+//        boolean result = false;
+//        int id = getFolderId(path);
+//        if(id != -1){
+//            folderId = id;
+//            result = true;  
+//        }
+//        return result;
+//    }
     
     /**
      * Formats the file system. This erases all data and sets up a clean root 
@@ -83,11 +109,11 @@ class FileSystem implements Serializable {
         writeFile(0,FolderBlock.save(folderBlock));
         
         // Reset workDir to root bock;
-        workDirId = 0;
+        //workDirId = 0;
     }
     
     /**
-     * get a unused block for example when allocating array. This block will not
+     * Get an unused block for example when allocating array. This block will not
      * be reserved. If you use this method two times in a row without writing to
      * the first block this method will return the same block. The reservation 
      * is done by writeFile(). This is done so that empty blocks aren't being 
@@ -132,7 +158,7 @@ class FileSystem implements Serializable {
             {
                 // Check if file is a folder
                 folderId = folder.getFileId(path[i]);
-                if(isAFolder(folderId)){
+                if(isFolder(folderId)){
                     // Splendid! We found a folder. Now we just have to make
                     // sure all of the remaining "path" is folders aswell
                 }else {
@@ -161,13 +187,14 @@ class FileSystem implements Serializable {
         return folder;
     }
     
-    public boolean appendToFile(String name, byte[] newData) {
+    public boolean appendToFile(String name, String[] path, byte[] newData) {
         boolean result = false;
+        int workDirId = getFolderId(path);
         FolderBlock workDir = FolderBlock.load(readFile(workDirId));
         int id = workDir.getFileId(name);
         
         // If file exist and is not a folder
-        if(id != -1 && isAFolder(id) == false){
+        if(id != -1 && isFolder(id) == false){
             
             // Merge data with old data
             byte[] oldData = readFile(id);
@@ -198,7 +225,7 @@ class FileSystem implements Serializable {
                 if (scrId == -1) {
                     result = "No source file found";
                 } else {
-                    if (isAFolder(scrId)) {
+                    if (isFolder(scrId)) {
                         result = "No source file found";
                     } else {
 
@@ -216,7 +243,7 @@ class FileSystem implements Serializable {
                                     result = "No destination file found";
                                 } else {
                                     int dstId = dstFolder.getFileId(dstName);
-                                    if (isAFolder(dstId) == false) {
+                                    if (isFolder(dstId) == false) {
                                         result = "Destination has to be a file";
                                     } else {
                                     }
@@ -318,14 +345,14 @@ class FileSystem implements Serializable {
         boolean result = false;
 
         // If source file is a folder
-        if (isAFolder(scrId)) {
+        if (isFolder(scrId)) {
             
             // Create new folder in destination folder
             int newFolderId = touchFile(dstName, true, dstFolderId);
             if (newFolderId != -1) {
                 result = true;
 
-                // Fetch files in source
+                // Fetch fileNames in source
                 FolderBlock srcFolder = FolderBlock.load(readFile(scrId));
                 String[] files = srcFolder.getFileNames();
 
@@ -351,14 +378,18 @@ class FileSystem implements Serializable {
         return result;
     }
     
-    public boolean rename(String oldName, String newName) {
+    public boolean rename(String oldName, String newName, String[] path) {
+        int workDirId = getFolderId(path);
         FolderBlock workDir = FolderBlock.load(readFile(workDirId));
         boolean result = workDir.rename(oldName, newName);
         writeFile(workDirId, FolderBlock.save(workDir));
         return result;
     }
     
-    // Get just the folder path of a full path
+    /** Get just the folder path of a full path. 
+     * @param path The String array
+     * @return A String array containing all elements but the last one.
+     */
     public String[] getFolderPath(String[] path) {
         String[] folderPath = new String[0];
         if (path.length > 0) {
@@ -368,7 +399,8 @@ class FileSystem implements Serializable {
         return folderPath;
     }
     
-    public String[] getFileNames() {
+    public String[] getFileNames(String[] path) {
+        int workDirId = getFolderId(path);
         FolderBlock workDir = FolderBlock.load(readFile(workDirId));
         return workDir.getFileNames();
     }
@@ -378,26 +410,28 @@ class FileSystem implements Serializable {
         return id;
     }
     
-    public void setNextBlockId(int blockId, int nextBlockId) {
-        intToByteArray(nextBlockId, blockArray[blockId], BLOCK_SIZE-4);
-    }
-    
-    public String[] getFolderNames() {
-        String[] files = getFileNames();
+    public String[] getFolderNames(String[] path) {
+        String[] files = getFileNames(path);
+        int folderId = getFolderId(path);
         ArrayList<String> folders = new ArrayList<String>(); 
-        for (String f : files) {
-            if(isAFolder(f))
-                folders.add(f);
+        for (String file : files) {
+            if(isFolder(file, folderId) == true)
+                folders.add(file);
         } 
         return folders.toArray(new String[folders.size()]);
     }
     
-    public String[] getNonFolderNames() {
-        String[] files = getFileNames();
+    public void setNextBlockId(int blockId, int nextBlockId) {
+        intToByteArray(nextBlockId, blockArray[blockId], BLOCK_SIZE-4);
+    }
+    
+    public String[] getNonFolderNames(String[] path) {    
+        String[] files = getFileNames(path);
+        int folderId = getFolderId(path);
         ArrayList<String> folders = new ArrayList<String>(); 
-        for (String f : files) {
-            if(isAFolder(f) == false)
-                folders.add(f);
+        for (String file : files) {
+            if(isFolder(file, folderId) == false)
+                folders.add(file);
         } 
         return folders.toArray(new String[folders.size()]);
     }
@@ -407,7 +441,7 @@ class FileSystem implements Serializable {
      * @param fileId Id of the file.
      * @return true if the file is a folder, otherwise false.
      */
-    public boolean isAFolder(int fileId) {
+    public boolean isFolder(int fileId) {
         boolean result = false;
 
         // If withing block range
@@ -424,19 +458,57 @@ class FileSystem implements Serializable {
         return result;
     }
     
-    public boolean isAFolder(String fileName) {
+    /**
+     * Checks whether the supplied file is a folder.
+     * @param fileName the file to look up
+     * @return true if a the supplied filename is a folder.
+     */
+    public boolean isFolder(String fileName, int folderId) {
         boolean result = false;
-        FolderBlock workDir = FolderBlock.load(readFile(workDirId));
+        FolderBlock workDir = FolderBlock.load(readFile(folderId));
         int id = workDir.getFileId(fileName);
         if(id != -1)
-            result = isAFolder(id);
+            result = isFolder(id);
         return result;
     }
     
+    /**
+     * Checks whether the block id is in range.
+     * @param blockId Which id to look up.
+     * @return true if in range.
+     */
     public boolean isIdValid(int blockId) {
-        return ((NUM_BLOCKS > blockId) && (blockId >= 0));
+        boolean result = false;
+        if((blockId < NUM_BLOCKS) && (blockId >= 0))
+            result = true;
+        return result;
     }
     
+    /**
+     * Checks if a path is valid.
+     * @param path Path of folders.
+     * @return true if the path is valid;
+     */
+    public boolean isPathValid(String path[]) {
+        boolean failed = false;
+        int folderId = 0; //root folder
+        int i = 0;
+        
+        while(failed == false && i < path.length) {
+            FolderBlock folder = FolderBlock.load(readFile(folderId));
+            
+            failed = true;
+            if(folder.isFileInFolder(path[i])) {
+                folderId = folder.getFileId(path[i]);
+                if(isFolder(folderId)) {
+                    folder = FolderBlock.load(readFile(folderId));
+                    failed = false;
+                }
+            }
+            i++;
+        }
+        return !failed;
+    }
     /**
      * Read a file from the file system.
      * @param fileId The ID of the file (the file inodes id).
@@ -472,13 +544,18 @@ class FileSystem implements Serializable {
         return data;
     }
     
-    public String readTextFromFile(String fileName) {
+    public String readTextFromFile(String fileName, String[] path) {
         String text = "";
+        int workDirId = getFolderId(path);
         FolderBlock workDir = FolderBlock.load(readFile(workDirId));
         int id = workDir.getFileId(fileName);
         if (id == -1) {
             text = "No such file";
-        } else {
+        }
+		else if(isFolder(id)) {
+			text = "Can't read folder as text";
+		} 
+		else {
             byte[] data = readFile(id);
             text = "Content of file (size " + data.length + " bytes):\n"; 
             
@@ -490,12 +567,13 @@ class FileSystem implements Serializable {
         return text;
     }
     
-    public boolean removeFile(String fileName) {
-        
-        return removeFile(fileName, workDirId);
+    public boolean removeFile(String fileName, String[] path) {
+        int folderId = getFolderId(path);
+        boolean result = removeFile(fileName, folderId);
+        return result;
     }
 
-    public boolean removeFile(String fileName, int folderId) {
+    public boolean removeFile(String fileName, int folderId /*String[] path*/) {
         boolean succees = false;
         FolderBlock folder = FolderBlock.load(readFile(folderId));
         int id = folder.getFileId(fileName);
@@ -504,10 +582,10 @@ class FileSystem implements Serializable {
         if(id != -1){
             
             // If file is a folder
-            if(isAFolder(id)){
+            if(isFolder(id)){
                 // Empty folder 
                 FolderBlock subFolder = FolderBlock.load(readFile(id));
-                emptyFolder(subFolder, id);
+                emptyFolder(id);
             }
             
             // Delete file and its inode from memory
@@ -525,33 +603,39 @@ class FileSystem implements Serializable {
         return succees;
     }
     
-    public boolean emptyFolder(FolderBlock folder, int folderId) {
+    /**
+     * Remove a folder contents, recursively
+     * @param folderId Id of the folder
+     * @return True if the folder contains subfolders.
+     */
+    public boolean emptyFolder(int folderId) {
         boolean result = false;
-        String[] files = folder.getFileNames();
+        
+        FolderBlock folder = FolderBlock.load(readFile(folderId));
+        String[] fileNames = folder.getFileNames();
         
         // For every file in folder
-        for (String f : files) {
+        for (String fileName : fileNames) {
             
             // If file is a folder
-            if(isAFolder(f)){
+            if(isFolder(fileName, folder.getFileId(fileName))){
                 
-                // Empty sub-folder
-                int subFolderId = folder.getFileId(f);
-                FolderBlock subFolder = FolderBlock.load(readFile(subFolderId));
-                emptyFolder(subFolder, subFolderId);
+                // Empty sub-folder, recursively
+                int subFolderId = folder.getFileId(fileName);
+                emptyFolder(subFolderId);
                 
                 // Delete file and its inode
-                Inode inode = new Inode(blockArray[subFolderId]);           
-                int blockId = inode.getDataPtr();
-                releaseBlock(blockId);
+//                Inode inode = new Inode(blockArray[subFolderId]);           
+//                int blockId = inode.getDataPtr();
+//                releaseBlock(blockId);
                 releaseBlock(subFolderId);
                 
                 // Remove file from folder
-                result = folder.removeFile(f);
+                result = folder.removeFile(fileName);
                 
             }else{
                 //Delete file from folder
-                removeFile(f, folderId);
+                removeFile(fileName, folderId);
             } 
         }
         
@@ -585,15 +669,18 @@ class FileSystem implements Serializable {
     /**
      * 'Touches' a file. Creates a inode in the given folder and gives it the
      * supplied file name. If the file doesn't already exist.
-     * @param path Path to the folder where you want to create the file.
      * @param fileName Name of the file.
      * @param asFolder If the file is going to be a folder.
+     * @param path Path to the folder where you want to create the file.
      * @return -1 if the path is invalid or if the file already exists. 
      * Otherwise its fileId (the inode id). 
      */
-    public int touchFile(String fileName, boolean asFolder) {
+    public int touchFile(String fileName, boolean asFolder, String[] path) {
         int result = -1;
-        result = touchFile(fileName, asFolder, workDirId);
+        int workDirId = getFolderId(path);
+        if(workDirId != -1) {
+            result = touchFile(fileName, asFolder, workDirId);
+        }
         return result;
     }
     
@@ -641,7 +728,7 @@ class FileSystem implements Serializable {
      * inode id)
      * @param data A byte array of data. The size of the array doesn't have to 
      * be the same as the block size 
-     * @return 
+     * @return True if successful.
      */
     public boolean writeFile(int inodeId, byte[] data) {
         boolean result = false;
@@ -697,13 +784,20 @@ class FileSystem implements Serializable {
         return result;
     }
     
-    public boolean writeToFile(String name, byte[] data) {
+    /**
+     * Write a file to the "disk" using it's filename.
+     * @param name Filename of the file.
+     * @param data byte array of data. 
+     * @return 
+     */
+    public boolean writeToFile(String name, byte[] data, String[] path) {
         boolean result = false;
+        int workDirId = getFolderId(path);
         FolderBlock workDir = FolderBlock.load(readFile(workDirId));
         int id = workDir.getFileId(name);
         
         // If file exist and is not a folder
-        if(id != -1 && isAFolder(id) == false){
+        if(id != -1 && isFolder(id) == false){
             // Write data
             result = writeFile(id, data);
         }

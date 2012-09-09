@@ -1,11 +1,19 @@
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+
+import print.*;
+import print.color.*;
+import print.exception.*;
 
 public class Shell {
 
     private FileManager fileManager;
     private InputStream m_Stream;
 
+    // Color output:
+    ColoredPrinterWIN printer;
+        
     public Shell(FileManager p_Filesystem, InputStream p_Stream) {
         fileManager = p_Filesystem;
 
@@ -14,8 +22,53 @@ public class Shell {
         } else {
             m_Stream = p_Stream;
         }
+        
+        printer = new ColoredPrinterWIN(new ColoredPrinterWIN.Builder(10,false));
+        
+        // C64 style
+        printer.setForegroundColor(Ansi.FColor.WHITE);
+		//printer.setAttribute(Ansi.Attribute.DARK);
     }
-
+	
+	private void printWarningMsg(String msg) {
+		setWarningColors();
+		printer.println(msg);
+		setNormalColors();
+	}
+	
+	private void printInfoMsg(String msg) {
+		setInfoColors();
+		printer.println(msg);
+		setNormalColors();
+	}
+	
+	private void setNormalColors() {
+		printer.setForegroundColor(Ansi.FColor.WHITE);
+		printer.print("");
+    }
+	private void setFolderColors() {
+		printer.setForegroundColor(Ansi.FColor.CYAN);
+    }
+	private void setFileColors() {
+		printer.setForegroundColor(Ansi.FColor.WHITE);
+    }
+    private void setInfoColors() {
+		printer.setForegroundColor(Ansi.FColor.YELLOW);
+    }
+	private void setWarningColors() {
+		printer.setForegroundColor(Ansi.FColor.RED);
+	}
+	
+    /**
+     * Reset console colors to std ones used by windows/nix. 
+     */
+    public void resetColors() {
+		printer.setAttribute(Ansi.Attribute.NONE);
+        printer.setBackgroundColor(Ansi.BColor.BLACK);
+        printer.setForegroundColor(Ansi.FColor.WHITE);
+		printer.print("");
+    }
+    
     public void start() {
         String[] asCommands = {"quit", "format", "ls", "create", "cat", "save", "read",
             "rm", "copy", "append", "rename", "mkdir", "cd", "pwd", "help", "load"};
@@ -26,7 +79,12 @@ public class Shell {
 
         while (bRun) {
             System.out.print("[" + fileManager.pwd() + "]$ ");
+			
             sCommand = readLine();
+			
+			while(sCommand.length() < 2)
+				sCommand = readLine();
+			
             asCommandArray = split(sCommand, ' ');
             if (asCommandArray.length == 0) {
             } else {
@@ -38,112 +96,114 @@ public class Shell {
                 }
                 switch (nIndex) {
                     case 0: // quit
+						resetColors();
                         return;
 
                     case 1: // format
                         if (asCommandArray.length != 1) {
-                            System.out.println("Usage: format");
+							printWarningMsg("Usage: format");
                         } else {
-                            System.out.println(fileManager.format());
+                            printInfoMsg(fileManager.format());
                         }
                         break;
                     case 2: // ls
                         if (asCommandArray.length == 1) {
-                            System.out.println(fileManager.ls(split(".", '/')));
+							
+                            printInfoMsg(fileManager.ls(split(".", '/')));
                         } else {
-                            if (asCommandArray.length != 2) {
-                                System.out.println("Usage: ls <path>");
+                            if (asCommandArray.length == 2) {
+								printInfoMsg(fileManager.ls(split(asCommandArray[1], '/')));
                             } else {
-                                System.out.println(fileManager.ls(split(asCommandArray[1], '/')));
+								printWarningMsg("Usage: ls <path>");
                             }
                         }
                         break;
                     case 3: // create
                         if (asCommandArray.length != 2) {
-                            System.out.println("Usage: create <file>");
+                            printWarningMsg("Usage: create <file>");
                         } else {
-                            System.out.println("Enter data. Empty line to end.");
-                            System.out.println(fileManager.create(split(asCommandArray[1], '/'), readBlock()));
+							System.out.println("Enter data. Empty line to end.");
+							System.out.println(fileManager.create(split(asCommandArray[1], '/'), readBlock()));
                         }
                         break;
 
                     case 4: // cat
                         if (asCommandArray.length != 2) {
-                            System.out.println("Usage: cat <file>");
+                            printWarningMsg("Usage: cat <file>");
                         } else {
-                            System.out.println(fileManager.cat(split(asCommandArray[1], '/')));
+                            System.out.print(fileManager.cat(split(asCommandArray[1], '/')));
                         }
                         break;
                     case 5: // save
                         if (asCommandArray.length != 2) {
-                            System.out.println("Usage: save <real-file>");
+                            printWarningMsg("Usage: save <real-file>");
                         } else {
-                            System.out.println(fileManager.save(asCommandArray[1]));
+                            printInfoMsg(fileManager.save(asCommandArray[1]));
                         }
                         break;
                     case 6: // read
                         if (asCommandArray.length != 2) {
-                            System.out.println("Usage: read <real-file>");
+                            printWarningMsg("Usage: read <real-file>");
                         } else {
-                            System.out.println(fileManager.read(asCommandArray[1]));
+                            printInfoMsg(fileManager.read(asCommandArray[1]));
                         }
                         break;
 
                     case 7: // rm
                         if (asCommandArray.length != 2) {
-                            System.out.println("Usage: rm <file>");
+                            printWarningMsg("Usage: rm <file>");
                         } else {
-                            System.out.println(fileManager.rm(split(asCommandArray[1], '/')));
+                            printInfoMsg(fileManager.rm(split(asCommandArray[1], '/')));
                         }
                         break;
 
                     case 8: // copy
                         if (asCommandArray.length != 3) {
-                            System.out.println("Usage: copy <source> <destination>");
+                            printWarningMsg("Usage: copy <source> <destination>");
                         } else {
                             String[] src = split(asCommandArray[1], '/');
                             String[] dst = split(asCommandArray[2], '/');
-                            System.out.println(fileManager.copy(src, dst));
+                            printInfoMsg(fileManager.copy(src, dst));
                         }
                         break;
 
                     case 9: // append
                         if (asCommandArray.length != 3) {
-                            System.out.println("Usage: append <source> <destination>");
+                            printWarningMsg("Usage: append <source> <destination>");
                         } else {
-                            System.out.println(fileManager.append(split(asCommandArray[1], '/'), split(asCommandArray[2], '/')));
+                            printInfoMsg(fileManager.append(split(asCommandArray[1], '/'), split(asCommandArray[2], '/')));
                         }
                         break;
 
                     case 10: // rename
                         if (asCommandArray.length != 3) {
-                            System.out.println("Usage: rename <old file> <new file>");
+                            printWarningMsg("Usage: rename <old file> <new file>");
                         } else {
-                            System.out.println(fileManager.rename(split(asCommandArray[1], '/'), split(asCommandArray[2], '/')));
+                            printInfoMsg(fileManager.rename(split(asCommandArray[1], '/'), split(asCommandArray[2], '/')));
                         }
                         break;
 
                     case 11: // mkdir
                         if (asCommandArray.length != 2) {
-                            System.out.println("Usage: mkdir <directory name>");
+							printWarningMsg("Usage: mkdir <directory name>");
                         } else {
-                            System.out.println(fileManager.mkdir(split(asCommandArray[1], '/')));
+                            printInfoMsg(fileManager.mkdir(split(asCommandArray[1], '/')));
                         }
                         break;
 
                     case 12: // cd
                         if (asCommandArray.length != 2) {
-                            System.out.println("Usage: cd <path>");
+                            printWarningMsg("Usage: cd <path>");
                         } else {
-                            System.out.println(fileManager.cd(split(asCommandArray[1], '/')));
+                            printInfoMsg(fileManager.cd(split(asCommandArray[1], '/')));
                         }
                         break;
 
                     case 13: // pwd
                         if (asCommandArray.length != 1) {
-                            System.out.println("Usage: pwd");
+                            printWarningMsg("Usage: pwd");
                         } else {
-                            System.out.println(fileManager.pwd());
+                            printInfoMsg(fileManager.pwd());
                         }
                         break;
 
@@ -153,37 +213,40 @@ public class Shell {
                         
                     case 15: // load file
                         if (asCommandArray.length != 2) {
-                            System.out.println("Usage: loadfile <real-file>");
+                            printWarningMsg("Usage: loadfile <real-file>");
                         } else {
-                            System.out.println(fileManager.loadfile(asCommandArray[1]));
+                            printInfoMsg(fileManager.loadfile(asCommandArray[1]));
                         }
                         break;
 
                     default:
-                        System.out.println("Unknown command " + asCommandArray[0]);
+                        printWarningMsg("Unknown command " + asCommandArray[0]);
                 }
             }
         }
     }
 
     private void printHelp() {
-        System.out.println("OSD Disk Tool .oO Help Screen Oo.");
-        System.out.println("-----------------------------------------------------------------------------------");
-        System.out.println("* quit:                             Quit OSD Disk Tool");
-        System.out.println("* format;                           Formats disk");
-        System.out.println("* ls     <path>:                    Lists contents of <path>.");
-        System.out.println("* create <path>:                    Creates a file and stores contents in <path>");
-        System.out.println("* cat    <path>:                    Dumps contents of <file>.");
-        System.out.println("* save   <real-file>:               Saves disk to <real-file>");
-        System.out.println("* read   <real-file>:               Reads <real-file> onto disk");
-        System.out.println("* rm     <file>:                    Removes <file>");
-        System.out.println("* copy   <source>    <destination>: Copy <source> to <destination>");
-        System.out.println("* append <source>    <destination>: Appends contents of <source> to <destination>");
-        System.out.println("* rename <old-file>  <new-file>:    Renames <old-file> to <new-file>");
-        System.out.println("* mkdir  <directory>:               Creates a new directory called <directory>");
-        System.out.println("* cd     <directory>:               Changes current working directory to <directory>");
-        System.out.println("* pwd:                              Get current working directory");
-        System.out.println("* help:                             Prints this help screen");
+		setInfoColors();
+        printer.println("OSD Disk Tool .oO Help Screen Oo.");
+        printer.println("-----------------------------------------------------------------------------------");
+        printer.println("* quit:                             Quit OSD Disk Tool");
+        printer.println("* format;                           Formats disk");
+        printer.println("* ls     <path>:                    Lists contents of <path>.");
+        printer.println("* create <path>:                    Creates a file and stores contents in <path>");
+        printer.println("* cat    <path>:                    Dumps contents of <file>.");
+        printer.println("* save   <real-file>:               Saves disk to <real-file>");
+        printer.println("* read   <real-file>:               Reads <real-file> onto disk");
+        printer.println("* rm     <path>:                    Removes <file>");
+        printer.println("* copy   <source>    <destination>: Copy <source> to <destination>");
+        printer.println("* append <source>    <destination>: Appends contents of <source> to <destination>");
+        printer.println("* rename <old-file>  <new-file>:    Renames <old-file> to <new-file>");
+        printer.println("* mkdir  <directory>:               Creates a new directory called <directory>");
+        printer.println("* cd     <directory>:               Changes current working directory to <directory>");
+        printer.println("* pwd:                              Get current working directory");
+        printer.println("* help:                             Prints this help screen");
+		setNormalColors();
+		printer.print("");
     }
 
 // With compliments to: Christoffer Nilsson (chna01) for fixing
@@ -260,7 +323,7 @@ public class Shell {
 
     private void dumpArray(String[] p_asArray) {
         for (int nIndex = 0; nIndex < p_asArray.length; nIndex++) {
-            System.out.print(p_asArray[nIndex] + "->");
+            printer.print(p_asArray[nIndex] + "->");
         }
         System.out.println();
     }

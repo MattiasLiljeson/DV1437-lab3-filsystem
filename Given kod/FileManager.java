@@ -1,34 +1,28 @@
-
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Stack;
 
 public class FileManager {
 
     private FileSystem fileSystem;
-    private Stack<String> workPath;
-    
+    private ArrayList<String> workPath;
 
     public FileManager(FileSystem p_BlockDevice) {
         fileSystem = p_BlockDevice;
         format();
         
-        // Add root map
-        workPath = new Stack<String>();
+        // Setup stack
+        workPath = new ArrayList(0);
         
         // Load example filestructure
-        System.out.println(read("default"));
+        //System.out.println(read("default"));
         
     }
 
     public String format() {
         fileSystem.format();
-        workPath = new Stack<String>();
+        workPath = new ArrayList(0);
         return new String("Diskformat successful");
     }
 
@@ -37,21 +31,20 @@ public class FileManager {
     }
     
     public String ls() {
-        String result = "";
-        String[] folderNames = fileSystem.getFolderNames();
-        String[] fileNames = fileSystem.getNonFolderNames();
-        
+        String result = "";    
+        String[] fileNames   = fileSystem.getNonFolderNames(workPath.toArray(new String[0]));
+        String[] folderNames = fileSystem.getFolderNames(workPath.toArray(new String[0]));
         
         // Append all folders to String
-        result = "<" + folderNames.length + " folder>";
+        //result = "<" + folderNames.length + " folder>";
         for(int i=0; i<folderNames.length; i++){
-            result = result + "\n" + folderNames[i];
+            result += folderNames[i] + "/\n";
         }
         
         // Append all files to String
-        result = result + "\n<" + fileNames.length + " file>";
+        //result = result + "\n<" + fileNames.length + " file>";
         for(int i=0; i<fileNames.length; i++){
-            result = result + "\n" + fileNames[i];
+            result += fileNames[i] + "\n";
         }
         
         // If no files
@@ -90,84 +83,94 @@ public class FileManager {
 
     public String create(String[] p_asPath, byte[] data) {
         String result = ""; 
-        String name = p_asPath[0];
+        String[] path = parsePath(workPath, p_asPath);
+        String name = path[path.length-1];
+        path = popStringArray(path);
         
         // Add "new line" to text to make it more readable in case we append two files.
         data[data.length-1] = '\n';
         
         // Create file
-        if (fileSystem.touchFile(name, false) != -1) {
-            result = "File created";
+        if (fileSystem.touchFile(name, false, path) != -1) {
+            result = "File created\n";
 
             // Write data to file
-            if(fileSystem.writeToFile(name, data)){
-                result = result + "\nWrite succeeded";
+            if(fileSystem.writeToFile(name, data, path)){
+                result += "Write succeeded";
             }else {
-                result = result + "\nWrite failed";
+                result += "Write failed";
             }
             
         } else {
-            result = "Name already exists";
+            result = "Name already exists / Folder in path doesn't exist";
         }
         
         return result;
     }
 
-    public String cat(String[] p_asPath) {
-        String fileName = p_asPath[0];
-        return fileSystem.readTextFromFile(fileName);
+    public String cat(String[] p_asPath) {        
+        String result = ""; 
+        String[] path = parsePath(workPath, p_asPath);
+        String name = path[path.length-1];
+        path = popStringArray(path);
+		
+        return fileSystem.readTextFromFile(name, path);
     }
     
     /*
      * Save as a UNIX file. what is a UNIX file? Wikipeida says nothing. Our 
      * guess is that it is a file without a file extension. Thats how we choose 
      * to implement it.
+     * 
+     *  Mattias Liljeson
      */
     public String save(String p_sPath) {
-        System.out.print("Saving blockdevice to file \"" + p_sPath+"\"\n");
-        String result = "Writing file failed";
+        String result = "Saving blockdevice to file \"" + p_sPath+"\"";
+        //result = "\nWriting file failed";
         
         try{
             FileOutputStream fs = new FileOutputStream(p_sPath);
             ObjectOutputStream os = new ObjectOutputStream(fs);
             os.writeObject(fileSystem);
             os.close();
-            result = "File written successfully";
+            result += "\nFile written successfully";
         }
         catch(IOException ex) {
-            result = "Failed to save file. IO error";
+            result += "\nFailed to save file. IO error";
         }
         
         return result;
     }
 
     public String read(String p_sPath) {
-        System.out.print("Reading file \"" + p_sPath + "\" to blockdevice\n");
-        String result = "Loading file failed";
+        String result = "Reading file \"" + p_sPath + "\" to blockdevice";
+        //result += "Loading file failed";
         
         try{
             FileInputStream fileStream = new FileInputStream(p_sPath);
             ObjectInputStream os = new ObjectInputStream(fileStream);
             format();
             fileSystem = (FileSystem)os.readObject();
-            result = "File loaded successfully";
+            result += "\nFile loaded successfully";
         }
         catch(IOException ex) {
-            result = "File not found or other IO error";
+            result += "\nFile not found or other IO error";
+            ex.printStackTrace();
         }
         catch(ClassNotFoundException ex) {
-            result = "Wrong type of file or from other version of program";
+            result += "\nWrong type of file or from other version of program";
         }
         
         return result;
     }
 
     public String rm(String[] p_asPath) {
-        String result = "No such file";
-        String name = p_asPath[0];
+		String result = "File not found"; 
+        String[] path = parsePath(workPath, p_asPath);
+        String name = path[path.length-1];
+        path = popStringArray(path);
         
-        // Create file
-        if (fileSystem.removeFile(name)) {
+        if (fileSystem.removeFile(name, path)) {
             result = "File removed";
         }
         
@@ -176,32 +179,32 @@ public class FileManager {
 
     public String copy(String[] p_asSource, String[] p_asDestination) {
         // Get the full source path
-        String[] src = getAddedPath(p_asSource);
-        
+        String[] src = parsePath(workPath, p_asSource);
         // Get the full destination path
-        String[] dst = getAddedPath(p_asDestination);
+        String[] dst = parsePath(workPath, p_asDestination);
         
         // Copy paths
         return fileSystem.copy(src, dst);
     }
 
     public String append(String[] p_asSource, String[] p_asDestination) {
-         // Get the full source path
-        String[] src = getAddedPath(p_asSource);
-        
+        // Get the full source path
+        String[] src = parsePath(workPath, p_asSource);
         // Get the full destination path
-        String[] dst = getAddedPath(p_asDestination);
-  
+        String[] dst = parsePath(workPath, p_asDestination);
 
         // Append files
         return fileSystem.mergeFiles(src, dst);
     }
 
-    public String rename(String[] p_asSource, String[] p_asDestination) {
-        String result = "";
-        String oldName = p_asSource[0];
-        String newName = p_asDestination[0];
-        if(fileSystem.rename(oldName, newName)){
+    public String rename(String[] p_asSource, String[] p_asDestination) {	
+		String result = ""; 
+        String[] path = parsePath(workPath, p_asSource);
+        String oldName = p_asSource[p_asSource.length-1];
+		String newName = p_asDestination[p_asDestination.length-1];
+        path = popStringArray(path);
+		
+        if(fileSystem.rename(oldName, newName, path)){
             result = "File renamed";
         }else{
             result = "Couldn't rename";
@@ -209,26 +212,31 @@ public class FileManager {
         return result;
     }
 
-    public String mkdir(String[] name) {
+    public String mkdir(String[] p_path) {
         String result = ""; 
-        if(fileSystem.touchFile(name[0], true) != -1){
+        String[] path = parsePath(workPath, p_path);
+        String name = path[path.length-1];
+        path = popStringArray(path);
+		
+        if(fileSystem.touchFile(name, true, path) != -1){
             result = "Directory created";
-        }else
-        {
+        }
+		else {
             result = "Name already exists";
         }
         return result;
     }
     
-    public String cd(String[] addedPath) {
-        String result = "";
+    public String cd(String[] p_path) {
+        String result = ""; 
+        String[] newPath = parsePath(workPath, p_path);
 
-        // Set workPath to new path, if path is valid
-        if (fileSystem.setWorkDir(getAddedPath(addedPath))) {
-            workPath = getAddedPathStack(addedPath);
-            result = "Directory changed\n" + ls();
+        if (fileSystem.isPathValid(newPath)) {
+            workPath = new ArrayList(Arrays.asList(newPath));
+            result = "Directory changed";
 
-        } else {
+        }
+		else {
             result = "No such directory";
         }
 
@@ -243,7 +251,7 @@ public class FileManager {
             path = path+"/"+d;
         }
         
-        return new String(path);
+        return path;
     }
 
     private void dumpArray(String[] p_asArray) {
@@ -278,5 +286,47 @@ public class FileManager {
         Stack<String> path = getAddedPathStack(addedPath);
         
          return path.toArray(new String[path.size()]);
+    }
+    
+    private String[] parsePath(ArrayList<String> workPath, String[] appendee) {
+        return parsePath(workPath.toArray(new String[0]), appendee);
+    }
+    
+    private String[] parsePath(String[] workPath, String[] appendee) {
+        ArrayList<String> tmp = new ArrayList(Arrays.asList(workPath));
+		tmp.addAll(Arrays.asList(appendee));
+        
+        // if ".." is part of the path, remove one layer from the workPath part
+		int indexOfTwoDots = findPhraseInStringArray(tmp.toArray(new String[0]), "..");
+        if(indexOfTwoDots != -1) {
+            tmp.remove(indexOfTwoDots);
+			if(indexOfTwoDots-1 > -1)
+				tmp.remove(indexOfTwoDots-1);
+		}
+		
+		int indexOfOneDot = findPhraseInStringArray(tmp.toArray(new String[0]), ".");
+		if(indexOfOneDot != -1) {
+            tmp.remove(indexOfOneDot);
+			if(indexOfOneDot-1 > -1)
+				tmp.remove(indexOfOneDot-1);
+		}
+		
+        return (tmp.toArray(new String[0]));
+    }
+    
+    private String[] popStringArray(String[] arr){
+        String[] tmpArr = new String[arr.length-1];
+        System.arraycopy(arr, 0, tmpArr, 0, tmpArr.length);
+        return tmpArr;
+    }
+    
+    private int findPhraseInStringArray(String[] arr, String phrase) {
+        int index = -1;
+        
+        for(int i=0; i<arr.length; i++)
+            if(arr[i].equals(phrase))
+                index = i;
+        
+        return index;
     }
 }

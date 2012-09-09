@@ -119,15 +119,24 @@ public class FolderBlock implements Serializable{
         return result;
     }
     
+    /**
+     * Get the contents of a folder in form of a string array.
+     * @return String array with the file names.
+     */
     public String[] getFileNames(){
         Set<String> set = folderContentsMap.keySet();
         return set.toArray(new String[set.size()]);   
     }
     
-    public int getInodePtrFromString(String fileName){
-        Integer tmp = folderContentsMap.get(fileName);
-        if(tmp == null)
-            tmp = -1;
-        return tmp;
-    }
+    /**
+     * Get id of file (inode).
+     * @param fileName The filename.
+     * @return id of the file (inode id/ptr).
+     */
+//    public int getFileIdFromString(String fileName){
+//        Integer tmp = folderContentsMap.get(fileName);
+//        if(tmp == null)
+//            tmp = -1;
+//        return tmp;
+//    }
 }
